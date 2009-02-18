@@ -7,7 +7,7 @@ Development targets:
  - Supports Query
  - Minimal error reporting (only reports whether there was an error)
 
-0.4.1
+0.4.1 (committed 2009-02-18)
  - Support QueryWithAttributes
 
 0.4.2
