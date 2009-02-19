@@ -1,7 +1,9 @@
 <?php
 /**
 *
-* Copyright (c) 2009, Dan Myers.  All rights reserved.
+* Copyright (c) 2009, Dan Myers.
+* Parts copyright (c) 2008, Donovan Schönknecht.
+* All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are met:
@@ -30,7 +32,7 @@
 *
 * Amazon SimpleDB is a trademark of Amazon.com, Inc. or its affiliates.
 *
-* sdb is based on Donovan Schönknecht's Amazon S3 PHP class, found here:
+* SimpleDB is based on Donovan Schönknecht's Amazon S3 PHP class, found here:
 * http://undesigned.org.za/2007/10/22/amazon-s3-php-class
 */
 
@@ -45,16 +47,22 @@ class SimpleDB
 	private static $__accessKey; // AWS Access key
 	private static $__secretKey; // AWS Secret key
 
+	public static $useSSL = true;
+	public static $verifyHost = 1;
+	public static $verifyPeer = 1;
+
 	/**
 	* Constructor - if you're not using the class statically
 	*
 	* @param string $accessKey Access key
 	* @param string $secretKey Secret key
+	* @param boolean $useSSL Enable SSL
 	* @return void
 	*/
-	public function __construct($accessKey = null, $secretKey = null) {
+	public function __construct($accessKey = null, $secretKey = null, $useSSL = true) {
 		if ($accessKey !== null && $secretKey !== null)
 			self::setAuth($accessKey, $secretKey);
+		self::$useSSL = $useSSL;
 	}
 
 	/**
@@ -67,6 +75,28 @@ class SimpleDB
 	public static function setAuth($accessKey, $secretKey) {
 		self::$__accessKey = $accessKey;
 		self::$__secretKey = $secretKey;
+	}
+
+	/**
+	* Enable or disable VERIFYHOST for SSL connections
+	* Only has an effect if $useSSL is true
+	*
+	* @param boolean $enable Enable VERIFYHOST
+	* @return void
+	*/
+	public static function enableVerifyHost($enable = true) {
+		self::$verifyHost = ($enable ? 1 : 0);
+	}
+
+	/**
+	* Enable or disable VERIFYPEER for SSL connections
+	* Only has an effect if $useSSL is true
+	*
+	* @param boolean $enable Enable VERIFYPEER
+	* @return void
+	*/
+	public static function enableVerifyPeer($enable = true) {
+		self::$verifyPeer = ($enable ? 1 : 0);
 	}
 
 	/**
@@ -131,6 +161,66 @@ class SimpleDB
 		foreach($rest->body->ListDomainsResult->DomainName as $d)
 		{
 			$results[] = (string)$d;
+		}
+
+		return $results;
+	}
+
+	/**
+	* Get a domain's metadata
+	*
+	* @param string $domain The domain
+	* @return array | false
+	*/
+	public static function domainMetadata($domain) {
+		$rest = new SimpleDBRequest($domain, 'DomainMetadata', 'GET', self::$__accessKey);
+		$rest = $rest->getResponse();
+		if ($rest->error === false && $rest->code !== 200)
+			$rest->error = array('code' => $rest->code, 'message' => 'Unexpected HTTP status');
+		if ($rest->error !== false) {
+			SimpleDB::__triggerError('domainMetadata', $rest->error);
+			return false;
+		}
+
+		$results = array();
+		if (!isset($rest->body->DomainMetadataResult))
+		{
+			return $results;
+		}
+
+		if(isset($rest->body->DomainMetadataResult->ItemCount))
+		{
+			$results['ItemCount'] = (string)($rest->body->DomainMetadataResult->ItemCount);
+		}
+
+		if(isset($rest->body->DomainMetadataResult->ItemNamesSizeBytes))
+		{
+			$results['ItemNamesSizeBytes'] = (string)($rest->body->DomainMetadataResult->ItemNamesSizeBytes);
+		}
+
+		if(isset($rest->body->DomainMetadataResult->AttributeNameCount))
+		{
+			$results['AttributeNameCount'] = (string)($rest->body->DomainMetadataResult->AttributeNameCount);
+		}
+
+		if(isset($rest->body->DomainMetadataResult->AttributeNamesSizeBytes))
+		{
+			$results['AttributeNamesSizeBytes'] = (string)($rest->body->DomainMetadataResult->AttributeNamesSizeBytes);
+		}
+
+		if(isset($rest->body->DomainMetadataResult->AttributeValueCount))
+		{
+			$results['AttributeValueCount'] = (string)($rest->body->DomainMetadataResult->AttributeValueCount);
+		}
+
+		if(isset($rest->body->DomainMetadataResult->AttributeValuesSizeBytes))
+		{
+			$results['AttributeValuesSizeBytes'] = (string)($rest->body->DomainMetadataResult->AttributeValuesSizeBytes);
+		}
+
+		if(isset($rest->body->DomainMetadataResult->Timestamp))
+		{
+			$results['Timestamp'] = (string)($rest->body->DomainMetadataResult->Timestamp);
 		}
 
 		return $results;
@@ -507,13 +597,19 @@ final class SimpleDBRequest
 		$strtosign = $this->verb."\n".$this->sdbhost."\n/\n".$query;
 		$query .= '&Signature='.rawurlencode(SimpleDB::__getSignature($strtosign));
 
-		$url = 'https://'.$this->sdbhost.'/?'.$query;
+		$ssl = (SimpleDB::$useSSL && extension_loaded('openssl'));
+		$url = ($ssl ? 'https://' : 'http://').$this->sdbhost.'/?'.$query;
 
 		// Basic setup
 		$curl = curl_init();
 		curl_setopt($curl, CURLOPT_USERAGENT, 'SimpleDB/php');
-		curl_setopt($curl, CURLOPT_SSL_VERIFYHOST, 1);
-		curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, 1);
+
+		if(SimpleDB::$useSSL)
+		{
+			curl_setopt($curl, CURLOPT_SSL_VERIFYHOST, SimpleDB::$verifyHost);
+			curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, SimpleDB::$verifyPeer);
+		}
+
 		curl_setopt($curl, CURLOPT_URL, $url);
 		curl_setopt($curl, CURLOPT_HEADER, false);
 		curl_setopt($curl, CURLOPT_RETURNTRANSFER, false);
