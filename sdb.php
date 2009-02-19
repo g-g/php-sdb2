@@ -40,7 +40,7 @@
 * Amazon SimpleDB PHP class
 *
 * @link http://sourceforge.net/projects/php-sdb/
-* @version 0.4.3
+* @version 0.4.4
 */
 class SimpleDB
 {
@@ -494,8 +494,11 @@ class SimpleDB
 		}
 		else
 		{
-			$message = sprintf("SimpleDB::%s(): Error %s.", $functionname, $error['StatusCode']);
-			trigger_error($message, E_USER_WARNING);
+			foreach($error['Errors'] as $e)
+			{
+				$message = sprintf("SimpleDB::%s(): %s: %s\n", $functionname, $e['Code'], $e['Message']);
+				trigger_error($message, E_USER_WARNING);
+			}
 		}
 	}
 
@@ -644,6 +647,8 @@ final class SimpleDBRequest
 			);
 
 		@curl_close($curl);
+		
+		var_dump($this->response->body);
 
 		// Parse body into XML
 		if ($this->response->error === false && isset($this->response->body)) {
@@ -651,12 +656,16 @@ final class SimpleDBRequest
 
 			// Grab SimpleDB errors
 			if (!in_array($this->response->code, array(200, 204))
-				&& isset($this->response->body->ResponseMetadata)
-				&& isset($this->response->body->ResponseMetadata->StatusCode)) {
-				$this->response->error = array(
-					'curl' => false,
-					'StatusCode' => (string)$this->response->body->ResponseMetadata->StatusCode
-				);
+				&& isset($this->response->body->Errors)) {
+				$this->response->error = array('curl' => false, 'Errors' => array());
+				foreach($this->response->body->Errors->Error as $e)
+				{
+					$err = array('Code' => (string)($e->Code),
+								 'Message' => (string)($e->Message)
+							//	 , 'BoxUsage' => (string)($e->BoxUsage)
+								 );
+					$this->response->error['Errors'][] = $err;
+				}
 				unset($this->response->body);
 			}
 		}
