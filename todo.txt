@@ -20,7 +20,7 @@ Development targets:
 0.4.4 (committed 2009-02-18)
  - Full error reporting
 
-0.4.5
+0.4.5 (committed 2009-02-19)
 - Remove explicit attribute count range check in putAttributes.
   The endpoint does this, and the limit may change in the future.
 - Allow putAttributes to support an array of values for a single key,

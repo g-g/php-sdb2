@@ -40,7 +40,7 @@
 * Amazon SimpleDB PHP class
 *
 * @link http://sourceforge.net/projects/php-sdb/
-* @version 0.4.4
+* @version 0.4.5
 */
 class SimpleDB
 {
@@ -399,17 +399,10 @@ class SimpleDB
 	* @param integer $attributes An array of (name => (value, replace)),
 	*                             where replace is a boolean of whether to replace the item.
 	*                             replace is optional, and defaults to false.
-	*                             value must be a single value.
-	*                            Limit 100 attributes.  Returns false if there are more.
+	*                             If value is an array, multiple values are put.
 	* @return boolean
 	*/
 	public static function putAttributes($domain, $item, $attributes) {
-		if(count($attributes) == 0 || count($attributes) > 100)
-		{
-			trigger_error("SimpleDB::putAttributes(): There is a limit of 100 attributes.", E_USER_WARNING);
-			return false;
-		}
-
 		$rest = new SimpleDBRequest($domain, 'PutAttributes', 'POST', self::$__accessKey);
 
 		$rest->setParameter('ItemName', $item);
@@ -417,13 +410,30 @@ class SimpleDB
 		$i = 0;
 		foreach($attributes as $name => $v)
 		{
-			$rest->setParameter('Attribute.'.$i.'.Name', $name);
-			$rest->setParameter('Attribute.'.$i.'.Value', $v['value']);
-			if(isset($v['replace']))
+			if(is_array($v['value']))
 			{
-				$rest->setParameter('Attribute.'.$i.'.Replace', $v['replace']);
+				foreach($v['value'] as $val)
+				{
+					$rest->setParameter('Attribute.'.$i.'.Name', $name);
+					$rest->setParameter('Attribute.'.$i.'.Value', $val, false);
+
+					if(isset($v['replace']))
+					{
+						$rest->setParameter('Attribute.'.$i.'.Replace', $v['replace']);
+					}
+					$i++;
+				}
 			}
-			$i++;
+			else
+			{
+				$rest->setParameter('Attribute.'.$i.'.Name', $name);
+				$rest->setParameter('Attribute.'.$i.'.Value', $v['value']);
+				if(isset($v['replace']))
+				{
+					$rest->setParameter('Attribute.'.$i.'.Replace', $v['replace']);
+				}
+				$i++;
+			}
 		}
 
 		$rest = $rest->getResponse();
@@ -647,8 +657,6 @@ final class SimpleDBRequest
 			);
 
 		@curl_close($curl);
-		
-		var_dump($this->response->body);
 
 		// Parse body into XML
 		if ($this->response->error === false && isset($this->response->body)) {
