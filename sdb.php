@@ -40,7 +40,7 @@
 * Amazon SimpleDB PHP class
 *
 * @link http://sourceforge.net/projects/php-sdb/
-* @version 0.4.1
+* @version 0.4.3
 */
 class SimpleDB
 {
