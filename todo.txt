@@ -7,13 +7,13 @@ Development targets:
  - Supports Query
  - Minimal error reporting (only reports whether there was an error)
 
-0.4.1
+0.4.1 (committed 2009-02-18)
  - Support QueryWithAttributes
 
-0.4.2
+0.4.2 (committed 2009-02-18)
  - Support DomainMetadata
 
-0.4.3
+0.4.3 (committed 2009-02-18)
  - Allow SSL to be disabled at developer's discretion (removed pre-0.4)
  - Allow VERIFYHOST and VERIFYPEER to be disabled
 
