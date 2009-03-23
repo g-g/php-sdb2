@@ -40,7 +40,7 @@
 * Amazon SimpleDB PHP class
 *
 * @link http://sourceforge.net/projects/php-sdb/
-* @version 0.4.5
+* @version 0.4.6
 */
 class SimpleDB
 {
@@ -287,9 +287,11 @@ class SimpleDB
 	public static function queryWithAttributes($domain, $query = '', $attributes = array(), $maxitems = -1, $nexttoken = null) {
 		$rest = new SimpleDBRequest($domain, 'QueryWithAttributes', 'GET', self::$__accessKey);
 
+		$i = 0;
 		foreach($attributes as $a)
 		{
-			$rest->setParameter('AttributeName', $a, false);
+			$rest->setParameter('AttributeName.'.$i, $a);
+			$i++;
 		}
 
 		if($query != '')

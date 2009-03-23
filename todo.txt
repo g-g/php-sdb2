@@ -26,7 +26,11 @@ Development targets:
 - Allow putAttributes to support an array of values for a single key,
   rather than requiring the dev to supply the same key multiple times.
 
-0.4.6
+0.4.6 (committed 2009-03-23)
+- Fixed QueryWithAttributes to correctly specify multiple attributes
+  in the query string and signature.
+
+0.4.7
  - Add optional tracking of BoxUsage
     -> The measure of machine utilization for this request.
     -> Does not include storage or transfer usage.
