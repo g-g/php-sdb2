@@ -1,0 +1,41 @@
+
+
+Development targets:
+0.4.0 (current as of SF project registration 2009-2-17)
+ - Supports CreateDomain, DeleteDomain, ListDomains
+ - Supports PutAttributes, DeleteAttributes, GetAttributes
+ - Supports Query
+ - Minimal error reporting (only reports whether there was an error)
+
+0.4.1 (committed 2009-02-18)
+ - Support QueryWithAttributes
+
+0.4.2 (committed 2009-02-18, folded into 0.4.3)
+ - Support DomainMetadata
+
+0.4.3 (committed 2009-02-18)
+ - Allow SSL to be disabled at developer's discretion (removed pre-0.4)
+ - Allow VERIFYHOST and VERIFYPEER to be disabled
+
+0.4.4 (committed 2009-02-18)
+ - Full error reporting
+
+0.4.5 (committed 2009-02-19)
+- Remove explicit attribute count range check in putAttributes.
+  The endpoint does this, and the limit may change in the future.
+- Allow putAttributes to support an array of values for a single key,
+  rather than requiring the dev to supply the same key multiple times.
+
+0.4.6 (committed 2009-03-23)
+- Fixed QueryWithAttributes to correctly specify multiple attributes
+  in the query string and signature.
+
+0.5.0 (committed 2009-04-03)
+- Added Select and BatchPutAttributes
+- Additions courtesy of Matthew Lanham
+
+0.5.1
+ - Add optional tracking of BoxUsage
+    -> The measure of machine utilization for this request.
+    -> Does not include storage or transfer usage.
+
