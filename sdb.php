@@ -40,7 +40,7 @@
 * Amazon SimpleDB PHP class
 *
 * @link http://sourceforge.net/projects/php-sdb/
-* @version 0.4.6
+* @version 0.5.0
 */
 class SimpleDB
 {
@@ -227,6 +227,66 @@ class SimpleDB
 	}
 
 	/**
+	* Evaluate a select expression on a domain
+	*
+	* Function provided by Matthew Lanham
+	*
+	* @param string  $domain The domain being queried
+	* @param string  $select The select expression to evaluate.
+	* @param string  $nexttoken The token to start from when retrieving results
+	* @return array | false
+	*/
+	public static function select($domain, $select, $nexttoken = null) {
+		$rest = new SimpleDBRequest($domain, 'Select', 'GET', self::$__accessKey);
+
+		if($select != '')
+		{
+			$rest->setParameter('SelectExpression', $select);
+		}
+		if($nexttoken !== null)
+		{
+			$rest->setParameter('NextToken', $nexttoken);
+		}
+
+		$rest = $rest->getResponse();
+
+		if ($rest->error === false && $rest->code !== 200)
+			$rest->error = array('code' => $rest->code, 'message' => 'Unexpected HTTP status');
+		if ($rest->error !== false) {
+			SimpleDB::__triggerError('query', $rest->error);
+			return false;
+		}
+
+		$results = array();
+
+		if (!isset($rest->body->SelectResult))
+		{
+			return $results;
+		}
+
+		foreach($rest->body->SelectResult->Item as $i)
+		{
+			$item = array('Name' => (string)($i->Name), 'Attributes' => array());
+			foreach($i->Attribute as $a)
+			{
+				if(isset($item['Attributes'][(string)($a->Name)]))
+				{
+					$temp = (array)($item['Attributes'][(string)($a->Name)]);
+					$temp[] = (string)($a->Value);
+					$item['Attributes'][(string)($a->Name)] = $temp;
+				}
+				else
+				{
+					$item['Attributes'][(string)($a->Name)] = (string)($a->Value);
+				}
+			}
+			$results[] = $item;
+		}
+
+		return $results;
+	}
+
+	/**
 	* Run a query on a domain
 	*
 	* @param string  $domain The domain being queried
@@ -398,7 +458,7 @@ class SimpleDB
 	*
 	* @param string  $domain The domain containing the desired item
 	* @param string  $item The desired item
-	* @param integer $attributes An array of (name => (value, replace)),
+	* @param integer $attributes An array of (name => (value [, replace])),
 	*                             where replace is a boolean of whether to replace the item.
 	*                             replace is optional, and defaults to false.
 	*                             If value is an array, multiple values are put.
@@ -445,6 +505,70 @@ class SimpleDB
 			SimpleDB::__triggerError('putAttributes', $rest->error);
 			return false;
 		}
+
+		return true;
+	}
+
+	/**
+	* Create or update attributes on multiple item
+	*
+	* Function provided by Matthew Lanham
+	*
+	* @param string $domain The domain containing the desired item
+	* @param array  $items An array of items of (item_name,
+												attributes => array(attribute_name => array(value [, replace])))
+	*						If replace is omitted it defaults to false.
+	*						Optionally, attributes may just be a single string value,
+	*							and replace will default to false.
+	* @return boolean
+	*/
+	public static function batchPutAttributes($domain, $items) {
+		$rest = new SimpleDBRequest($domain, 'BatchPutAttributes', 'POST', self::$__accessKey);
+		
+		$ii = 0;
+		foreach($items as $item)
+		{
+			$rest->setParameter('Item.'.$ii.'.ItemName', $item['name']);
+
+			$i = 0;
+			foreach($item['attributes'] as $name => $v)
+			{
+				if(is_array($v['value']))
+				{
+					foreach($v['value'] as $val)
+					{
+						$rest->setParameter('Item.'.$ii.'.Attribute.'.$i.'.Name', $name);
+						$rest->setParameter('Item.'.$ii.'.Attribute.'.$i.'.Value', $val, false);
+
+						if(isset($v['replace']))
+						{
+							$rest->setParameter('Item.'.$ii.'.Attribute.'.$i.'.Replace', $v['replace']);
+						}
+						$i++;
+					}
+				}
+				else
+				{
+					$rest->setParameter('Item.'.$ii.'.Attribute.'.$i.'.Name', $name);
+					$rest->setParameter('Item.'.$ii.'.Attribute.'.$i.'.Value', $v['value']);
+					if(isset($v['replace']))
+					{
+						$rest->setParameter('Item.'.$ii.'.Attribute.'.$i.'.Replace', $v['replace']);
+					}
+					$i++;
+				}
+			}
+			$ii++;
+		}
+
+		$rest = $rest->getResponse();
+		if ($rest->error === false && $rest->code !== 200)
+			$rest->error = array('code' => $rest->code, 'message' => 'Unexpected HTTP status');
+		if ($rest->error !== false) {
+			SimpleDB::__triggerError('batchPutAttributes', $rest->error);
+			return false;
+		}
+		
 
 		return true;
 	}
