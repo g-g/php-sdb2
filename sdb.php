@@ -593,7 +593,7 @@ class SimpleDB
 		if($attributes !== null)
 		{
 			$i = 0;
-			foreach($attribute as $name => $value)
+			foreach($attributes as $name => $value)
 			{
 				$rest->setParameter('Attribute.'.$i.'.Name', $name);
 				if($value !== null)
