@@ -481,7 +481,16 @@ class SimpleDB
 
 					if(isset($v['replace']))
 					{
-						$rest->setParameter('Attribute.'.$i.'.Replace', $v['replace']);
+						// Originally the code assumed $v['replace'] was a string.
+						// Some people are passing a boolean, so we'll handle both for convenience and compatibility.
+						if(is_string($v['replace']))
+						{
+							$rest->setParameter('Attribute.'.$i.'.Replace', $v['replace']);
+						}
+						else
+						{
+							$rest->setParameter('Attribute.'.$i.'.Replace', ($v['replace'] ? 'true' : 'false'));
+						}
 					}
 					$i++;
 				}
@@ -492,7 +501,16 @@ class SimpleDB
 				$rest->setParameter('Attribute.'.$i.'.Value', $v['value']);
 				if(isset($v['replace']))
 				{
-					$rest->setParameter('Attribute.'.$i.'.Replace', $v['replace']);
+					// Originally the code assumed $v['replace'] was a string.
+					// Some people are passing a boolean, so we'll handle both for convenience and compatibility.
+					if(is_string($v['replace']))
+					{
+						$rest->setParameter('Attribute.'.$i.'.Replace', $v['replace']);
+					}
+					else
+					{
+						$rest->setParameter('Attribute.'.$i.'.Replace', ($v['replace'] ? 'true' : 'false'));
+					}
 				}
 				$i++;
 			}
@@ -542,7 +560,16 @@ class SimpleDB
 
 						if(isset($v['replace']))
 						{
-							$rest->setParameter('Item.'.$ii.'.Attribute.'.$i.'.Replace', $v['replace']);
+							// Originally the code assumed $v['replace'] was a string.
+							// Some people are passing a boolean, so we'll handle both for convenience and compatibility.
+							if(is_string($v['replace']))
+							{
+								$rest->setParameter('Item.'.$ii.'.Attribute.'.$i.'.Replace', $v['replace']);
+							}
+							else
+							{
+								$rest->setParameter('Item.'.$ii.'.Attribute.'.$i.'.Replace', ($v['replace'] ? 'true' : 'false'));
+							}
 						}
 						$i++;
 					}
@@ -553,7 +580,16 @@ class SimpleDB
 					$rest->setParameter('Item.'.$ii.'.Attribute.'.$i.'.Value', $v['value']);
 					if(isset($v['replace']))
 					{
-						$rest->setParameter('Item.'.$ii.'.Attribute.'.$i.'.Replace', $v['replace']);
+						// Originally the code assumed $v['replace'] was a string.
+						// Some people are passing a boolean, so we'll handle both for convenience and compatibility.
+						if(is_string($v['replace']))
+						{
+							$rest->setParameter('Item.'.$ii.'.Attribute.'.$i.'.Replace', $v['replace']);
+						}
+						else
+						{
+							$rest->setParameter('Item.'.$ii.'.Attribute.'.$i.'.Replace', ($v['replace'] ? 'true' : 'false'));
+						}
 					}
 					$i++;
 				}
