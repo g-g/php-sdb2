@@ -1,7 +1,4 @@
-
-
-Development targets:
-0.4.0 (current as of SF project registration 2009-2-17)
+0.4.0 (initial checkin 2009-2-17)
  - Supports CreateDomain, DeleteDomain, ListDomains
  - Supports PutAttributes, DeleteAttributes, GetAttributes
  - Supports Query
@@ -34,8 +31,11 @@ Development targets:
 - Added Select and BatchPutAttributes
 - Additions courtesy of Matthew Lanham
 
-0.5.1
- - Add optional tracking of BoxUsage
-    -> The measure of machine utilization for this request.
-    -> Does not include storage or transfer usage.
+0.7.0 (committed 2010-03-01)
+- Incorporated changes made by Rich Helms
+  - Fixed error in deleteAttributes
+  - Update to 2009-04-15 interface
+  - Add BoxUsage, RequestId, NextToken, and ErrorCode tracking for the last request
+  - Support for ConsistentRead
+  - Support for conditional put and conditional delete
 

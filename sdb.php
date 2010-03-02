@@ -2,7 +2,8 @@
 /**
 *
 * Copyright (c) 2009, Dan Myers.
-* Parts copyright (c) 2008, Donovan Schönknecht.
+* Parts copyright (c) 2008, Donovan Schonknecht.
+* Additional functionality by Rich Helms rich@webmasterinresidence.ca
 * All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
@@ -32,15 +33,20 @@
 *
 * Amazon SimpleDB is a trademark of Amazon.com, Inc. or its affiliates.
 *
-* SimpleDB is based on Donovan Schönknecht's Amazon S3 PHP class, found here:
+* SimpleDB is based on Donovan Schonknecht's Amazon S3 PHP class, found here:
 * http://undesigned.org.za/2007/10/22/amazon-s3-php-class
+*
+* For notes on eventual consistency and the use of the ConsistentRead parameter,
+* see http://developer.amazonwebservices.com/connect/entry.jspa?externalID=3572
+*
 */
 
 /**
 * Amazon SimpleDB PHP class
 *
 * @link http://sourceforge.net/projects/php-sdb/
-* @version 0.5.0
+* version 0.7.0
+*
 */
 class SimpleDB
 {
@@ -50,6 +56,12 @@ class SimpleDB
 	public static $useSSL = true;
 	public static $verifyHost = 1;
 	public static $verifyPeer = 1;
+
+	// information related to last request
+	public $BoxUsage;
+	public $RequestId;
+	public $NextToken;
+	public $ErrorCode;
 
 	/**
 	* Constructor - if you're not using the class statically
@@ -105,7 +117,9 @@ class SimpleDB
 	* @param string $domain The domain to create
 	* @return boolean
 	*/
-	public static function createDomain($domain) {
+	public function createDomain($domain) {
+		SimpleDB::__clearReturns();
+		
 		$rest = new SimpleDBRequest($domain, 'CreateDomain', 'POST', self::$__accessKey);
 		$rest = $rest->getResponse();
 		if ($rest->error === false && $rest->code !== 200)
@@ -113,6 +127,13 @@ class SimpleDB
 		if ($rest->error !== false) {
 			SimpleDB::__triggerError('createDomain', $rest->error);
 			return false;
+		}
+
+		if(isset($rest->body->ResponseMetadata->RequestId)) {
+			$this->RequestId = (string)($rest->body->ResponseMetadata->RequestId);
+		}
+		if(isset($rest->body->ResponseMetadata->BoxUsage)) {
+			$this->BoxUsage = (string)($rest->body->ResponseMetadata->BoxUsage);
 		}
 
 		return true;
@@ -124,7 +145,9 @@ class SimpleDB
 	* @param string $domain The domain to delete
 	* @return boolean
 	*/
-	public static function deleteDomain($domain) {
+	public function deleteDomain($domain) {
+		SimpleDB::__clearReturns();
+
 		$rest = new SimpleDBRequest($domain, 'DeleteDomain', 'DELETE', self::$__accessKey);
 		$rest = $rest->getResponse();
 		if ($rest->error === false && $rest->code !== 200)
@@ -132,6 +155,13 @@ class SimpleDB
 		if ($rest->error !== false) {
 			SimpleDB::__triggerError('deleteDomain', $rest->error);
 			return false;
+		}
+
+		if(isset($rest->body->ResponseMetadata->RequestId)) {
+			$this->RequestId = (string)($rest->body->ResponseMetadata->RequestId);
+		}
+		if(isset($rest->body->ResponseMetadata->BoxUsage)) {
+			$this->BoxUsage = (string)($rest->body->ResponseMetadata->BoxUsage);
 		}
 
 		return true;
@@ -142,7 +172,9 @@ class SimpleDB
 	*
 	* @return array | false
 	*/
-	public static function listDomains() {
+	public function listDomains() {
+		SimpleDB::__clearReturns();
+
 		$rest = new SimpleDBRequest('', 'ListDomains', 'GET', self::$__accessKey);
 		$rest = $rest->getResponse();
 		if ($rest->error === false && $rest->code !== 200)
@@ -163,6 +195,13 @@ class SimpleDB
 			$results[] = (string)$d;
 		}
 
+		if(isset($rest->body->ResponseMetadata->RequestId)) {
+			$this->RequestId = (string)($rest->body->ResponseMetadata->RequestId);
+		}
+		if(isset($rest->body->ResponseMetadata->BoxUsage)) {
+			$this->BoxUsage = (string)($rest->body->ResponseMetadata->BoxUsage);
+		}
+
 		return $results;
 	}
 
@@ -171,8 +210,20 @@ class SimpleDB
 	*
 	* @param string $domain The domain
 	* @return array | false
+	*	Array returned
+	*	(
+	*		[ItemCount] => 3
+	*		[ItemNamesSizeBytes] => 16
+	*		[AttributeNameCount] => 9
+	*		[AttributeNamesSizeBytes] => 76
+	*		[AttributeValueCount] => 13
+	*		[AttributeValuesSizeBytes] => 65
+	*		[Timestamp] => 1247238402
+	*	)
 	*/
-	public static function domainMetadata($domain) {
+	public function domainMetadata($domain) {
+		SimpleDB::__clearReturns();
+
 		$rest = new SimpleDBRequest($domain, 'DomainMetadata', 'GET', self::$__accessKey);
 		$rest = $rest->getResponse();
 		if ($rest->error === false && $rest->code !== 200)
@@ -183,44 +234,35 @@ class SimpleDB
 		}
 
 		$results = array();
-		if (!isset($rest->body->DomainMetadataResult))
-		{
+		if (!isset($rest->body->DomainMetadataResult)) {
 			return $results;
 		}
-
-		if(isset($rest->body->DomainMetadataResult->ItemCount))
-		{
+		if(isset($rest->body->DomainMetadataResult->ItemCount)) {
 			$results['ItemCount'] = (string)($rest->body->DomainMetadataResult->ItemCount);
 		}
-
-		if(isset($rest->body->DomainMetadataResult->ItemNamesSizeBytes))
-		{
+		if(isset($rest->body->DomainMetadataResult->ItemNamesSizeBytes)) {
 			$results['ItemNamesSizeBytes'] = (string)($rest->body->DomainMetadataResult->ItemNamesSizeBytes);
 		}
-
-		if(isset($rest->body->DomainMetadataResult->AttributeNameCount))
-		{
+		if(isset($rest->body->DomainMetadataResult->AttributeNameCount)) {
 			$results['AttributeNameCount'] = (string)($rest->body->DomainMetadataResult->AttributeNameCount);
 		}
-
-		if(isset($rest->body->DomainMetadataResult->AttributeNamesSizeBytes))
-		{
+		if(isset($rest->body->DomainMetadataResult->AttributeNamesSizeBytes)) {
 			$results['AttributeNamesSizeBytes'] = (string)($rest->body->DomainMetadataResult->AttributeNamesSizeBytes);
 		}
-
-		if(isset($rest->body->DomainMetadataResult->AttributeValueCount))
-		{
+		if(isset($rest->body->DomainMetadataResult->AttributeValueCount))	{
 			$results['AttributeValueCount'] = (string)($rest->body->DomainMetadataResult->AttributeValueCount);
 		}
-
-		if(isset($rest->body->DomainMetadataResult->AttributeValuesSizeBytes))
-		{
+		if(isset($rest->body->DomainMetadataResult->AttributeValuesSizeBytes)) {
 			$results['AttributeValuesSizeBytes'] = (string)($rest->body->DomainMetadataResult->AttributeValuesSizeBytes);
 		}
-
-		if(isset($rest->body->DomainMetadataResult->Timestamp))
-		{
+		if(isset($rest->body->DomainMetadataResult->Timestamp)) {
 			$results['Timestamp'] = (string)($rest->body->DomainMetadataResult->Timestamp);
+		}
+		if(isset($rest->body->ResponseMetadata->RequestId)) {
+			$this->RequestId = (string)($rest->body->ResponseMetadata->RequestId);
+		}
+		if(isset($rest->body->ResponseMetadata->BoxUsage)) {
+			$this->BoxUsage = (string)($rest->body->ResponseMetadata->BoxUsage);
 		}
 
 		return $results;
@@ -234,22 +276,26 @@ class SimpleDB
 	* @param string  $domain The domain being queried
 	* @param string  $select The select expression to evaluate.
 	* @param string  $nexttoken The token to start from when retrieving results
+	* @param boolean ConsistentRead - force consistent read = true
 	* @return array | false
 	*/
-	public static function select($domain, $select, $nexttoken = null) {
+	public function select($domain, $select, $nexttoken = null, $ConsistentRead = false) {
+		SimpleDB::__clearReturns();
+
 		$rest = new SimpleDBRequest($domain, 'Select', 'GET', self::$__accessKey);
 
-		if($select != '')
-		{
+		if($select != '') {
 			$rest->setParameter('SelectExpression', $select);
 		}
-		if($nexttoken !== null)
-		{
+		if($nexttoken !== null) {
 			$rest->setParameter('NextToken', $nexttoken);
+		}
+		if($ConsistentRead == true) {
+			$rest->setParameter('ConsistentRead', "true");
 		}
 
 		$rest = $rest->getResponse();
-
+				
 		if ($rest->error === false && $rest->code !== 200)
 			$rest->error = array('code' => $rest->code, 'message' => 'Unexpected HTTP status');
 		if ($rest->error !== false) {
@@ -259,24 +305,28 @@ class SimpleDB
 
 		$results = array();
 
-		if (!isset($rest->body->SelectResult))
-		{
+		if (!isset($rest->body->SelectResult)) {
 			return $results;
 		}
 
-		foreach($rest->body->SelectResult->Item as $i)
-		{
+		if(isset($rest->body->ResponseMetadata->RequestId)) {
+			$this->RequestId = (string)($rest->body->ResponseMetadata->RequestId);
+		}
+		if(isset($rest->body->ResponseMetadata->BoxUsage)) {
+			$this->BoxUsage = (string)($rest->body->ResponseMetadata->BoxUsage);
+		}
+		if ($rest->body->SelectResult->NextToken) {
+			$this->NextToken = (string)$rest->body->SelectResult->NextToken;
+		}
+
+		foreach($rest->body->SelectResult->Item as $i) {
 			$item = array('Name' => (string)($i->Name), 'Attributes' => array());
-			foreach($i->Attribute as $a)
-			{
-				if(isset($item['Attributes'][(string)($a->Name)]))
-				{
+			foreach($i->Attribute as $a) {
+				if(isset($item['Attributes'][(string)($a->Name)])) {
 					$temp = (array)($item['Attributes'][(string)($a->Name)]);
 					$temp[] = (string)($a->Value);
 					$item['Attributes'][(string)($a->Name)] = $temp;
-				}
-				else
-				{
+				} else {
 					$item['Attributes'][(string)($a->Name)] = (string)($a->Value);
 				}
 			}
@@ -288,12 +338,16 @@ class SimpleDB
 
 	/**
 	* Run a query on a domain
+	* returns record names ONLY
+	* Uses ['course'='lpq'] structure
 	*
 	* @param string  $domain The domain being queried
 	* @param string  $query The query to run.  If blank, retrieve all items.
 	* @param integer $maxitems The number of items to return
 	* @param string  $nexttoken The token to start from when retrieving results
 	* @return array | false
+	*
+	* 2009-05-20: Deprecate Query and QueryWithAttributes.
 	*/
 	public static function query($domain, $query = '', $maxitems = -1, $nexttoken = null) {
 		$rest = new SimpleDBRequest($domain, 'Query', 'GET', self::$__accessKey);
@@ -343,6 +397,8 @@ class SimpleDB
 	* @param integer $maxitems The number of items to return
 	* @param string  $nexttoken The token to start from when retrieving results
 	* @return array of (itemname, array(attributename, array(values))) | false
+	*
+	* 2009-05-20: Deprecate Query and QueryWithAttributes.
 	*/
 	public static function queryWithAttributes($domain, $query = '', $attributes = array(), $maxitems = -1, $nexttoken = null) {
 		$rest = new SimpleDBRequest($domain, 'QueryWithAttributes', 'GET', self::$__accessKey);
@@ -410,16 +466,22 @@ class SimpleDB
 	* @param string  $domain The domain containing the desired item
 	* @param string  $item The desired item
 	* @param integer $attribute A specific attribute to retrieve, or all if unspecified.
+	* @param boolean ConsistentRead - force consistent read = true
 	* @return boolean
 	*/
-	public static function getAttributes($domain, $item, $attribute = null) {
+	public function getAttributes($domain, $item, $attribute = null, $ConsistentRead = false) {
+		SimpleDB::__clearReturns();
+
 		$rest = new SimpleDBRequest($domain, 'GetAttributes', 'GET', self::$__accessKey);
 
 		$rest->setParameter('ItemName', $item);
 
-		if($attribute !== null)
-		{
+		if($attribute !== null)	{
 			$rest->setParameter('AttributeName', $attribute);
+		}
+
+		if($ConsistentRead == true)	{
+			$rest->setParameter('ConsistentRead', "true");
 		}
 
 		$rest = $rest->getResponse();
@@ -431,23 +493,25 @@ class SimpleDB
 		}
 
 		$results = array();
-		if (!isset($rest->body->GetAttributesResult))
-		{
+		if (!isset($rest->body->GetAttributesResult))	{
 			return $results;
 		}
 
-		foreach($rest->body->GetAttributesResult->Attribute as $a)
-		{
-			if(isset($results[(string)($a->Name)]))
-			{
+		foreach($rest->body->GetAttributesResult->Attribute as $a) {
+			if(isset($results[(string)($a->Name)]))	{
 				$temp = (array)($results[(string)($a->Name)]);
 				$temp[] = (string)($a->Value);
 				$results[(string)($a->Name)] = $temp;
-			}
-			else
-			{
+			} else {
 				$results[(string)($a->Name)] = (string)($a->Value);
 			}
+		}
+
+		if(isset($rest->body->ResponseMetadata->RequestId)) {
+			$this->RequestId = (string)($rest->body->ResponseMetadata->RequestId);
+		}
+		if(isset($rest->body->ResponseMetadata->BoxUsage)) {
+			$this->BoxUsage = (string)($rest->body->ResponseMetadata->BoxUsage);
 		}
 
 		return $results;
@@ -458,61 +522,70 @@ class SimpleDB
 	*
 	* @param string  $domain The domain containing the desired item
 	* @param string  $item The desired item
-	* @param integer $attributes An array of (name => (value [, replace])),
-	*                             where replace is a boolean of whether to replace the item.
-	*                             replace is optional, and defaults to false.
-	*                             If value is an array, multiple values are put.
+	* @param array $attributes An array of (name => (value [, replace])),
+	*							 where replace is a boolean of whether to replace the item.
+	*							 replace is optional, and defaults to false.
+	*							 If value is an array, multiple values are put.
+	* @param array $expected An array of (name => (value)), or (name => (exists = "false"))
 	* @return boolean
 	*/
-	public static function putAttributes($domain, $item, $attributes) {
+	public function putAttributes($domain, $item, $attributes, $expected) {
+		SimpleDB::__clearReturns();
+
 		$rest = new SimpleDBRequest($domain, 'PutAttributes', 'POST', self::$__accessKey);
 
 		$rest->setParameter('ItemName', $item);
 
 		$i = 0;
-		foreach($attributes as $name => $v)
-		{
-			if(is_array($v['value']))
-			{
-				foreach($v['value'] as $val)
-				{
+		foreach($attributes as $name => $v) {
+			if(is_array($v['value']))	{
+				foreach($v['value'] as $val) {
 					$rest->setParameter('Attribute.'.$i.'.Name', $name);
 					$rest->setParameter('Attribute.'.$i.'.Value', $val, false);
 
-					if(isset($v['replace']))
-					{
-						// Originally the code assumed $v['replace'] was a string.
-						// Some people are passing a boolean, so we'll handle both for convenience and compatibility.
-						if(is_string($v['replace']))
-						{
-							$rest->setParameter('Attribute.'.$i.'.Replace', $v['replace']);
-						}
-						else
-						{
-							$rest->setParameter('Attribute.'.$i.'.Replace', ($v['replace'] ? 'true' : 'false'));
-						}
+					if(isset($v['replace'])) {
+						$rest->setParameter('Attribute.'.$i.'.Replace', $v['replace']);
 					}
 					$i++;
 				}
-			}
-			else
-			{
+			}	else {
 				$rest->setParameter('Attribute.'.$i.'.Name', $name);
 				$rest->setParameter('Attribute.'.$i.'.Value', $v['value']);
-				if(isset($v['replace']))
-				{
-					// Originally the code assumed $v['replace'] was a string.
-					// Some people are passing a boolean, so we'll handle both for convenience and compatibility.
-					if(is_string($v['replace']))
-					{
-						$rest->setParameter('Attribute.'.$i.'.Replace', $v['replace']);
-					}
-					else
-					{
-						$rest->setParameter('Attribute.'.$i.'.Replace', ($v['replace'] ? 'true' : 'false'));
-					}
+				if(isset($v['replace'])) {
+					$rest->setParameter('Attribute.'.$i.'.Replace', $v['replace']);
 				}
 				$i++;
+			}
+		}
+		
+		if(is_array($expected))	{
+			foreach($expected as $name => $v) {
+				if(is_array($v['value']))	{  // expected value
+					foreach($v['value'] as $val) {
+						$rest->setParameter('Expected.'.$i.'.Name', $name);
+						$rest->setParameter('Expected.'.$i.'.Value', $val);
+						$i++;
+					}
+				}	else {
+					if ($v['value']) {
+						$rest->setParameter('Expected.'.$i.'.Name', $name);
+						$rest->setParameter('Expected.'.$i.'.Value', $v['value']);
+						$i++;
+					}
+				}
+				if(is_array($v['exists']))	{
+					foreach($v['exists'] as $val) { // expected does not exist
+						$rest->setParameter('Expected.'.$i.'.Name', $name);
+						$rest->setParameter('Expected.'.$i.'.Exists', $val);
+						$i++;
+					}
+				}	else {
+					if ($v['exists']) {
+						$rest->setParameter('Expected.'.$i.'.Name', $name);
+						$rest->setParameter('Expected.'.$i.'.Exists', $v['exists']);
+						$i++;
+					}
+				}
 			}
 		}
 
@@ -523,24 +596,31 @@ class SimpleDB
 			SimpleDB::__triggerError('putAttributes', $rest->error);
 			return false;
 		}
+		if(isset($rest->body->ResponseMetadata->RequestId)) {
+			$this->RequestId = (string)($rest->body->ResponseMetadata->RequestId);
+		}
+		if(isset($rest->body->ResponseMetadata->BoxUsage)) {
+			$this->BoxUsage = (string)($rest->body->ResponseMetadata->BoxUsage);
+		}
 
 		return true;
 	}
 
 	/**
 	* Create or update attributes on multiple item
+	* MAX 35 items per write (SimpleDB limit)
 	*
 	* Function provided by Matthew Lanham
 	*
 	* @param string $domain The domain containing the desired item
-	* @param array  $items An array of items of (item_name,
-												attributes => array(attribute_name => array(value [, replace])))
-	*						If replace is omitted it defaults to false.
-	*						Optionally, attributes may just be a single string value,
-	*							and replace will default to false.
+	* @param array  $items An array of items of (item_name, attributes => array(attribute_name => array(value [, replace])))
+	*	If replace is omitted it defaults to false.
+	*	Optionally, attributes may just be a single string value, and replace will default to false.
 	* @return boolean
 	*/
-	public static function batchPutAttributes($domain, $items) {
+	public function batchPutAttributes($domain, $items) {
+		SimpleDB::__clearReturns();
+
 		$rest = new SimpleDBRequest($domain, 'BatchPutAttributes', 'POST', self::$__accessKey);
 		
 		$ii = 0;
@@ -560,16 +640,7 @@ class SimpleDB
 
 						if(isset($v['replace']))
 						{
-							// Originally the code assumed $v['replace'] was a string.
-							// Some people are passing a boolean, so we'll handle both for convenience and compatibility.
-							if(is_string($v['replace']))
-							{
-								$rest->setParameter('Item.'.$ii.'.Attribute.'.$i.'.Replace', $v['replace']);
-							}
-							else
-							{
-								$rest->setParameter('Item.'.$ii.'.Attribute.'.$i.'.Replace', ($v['replace'] ? 'true' : 'false'));
-							}
+							$rest->setParameter('Item.'.$ii.'.Attribute.'.$i.'.Replace', $v['replace']);
 						}
 						$i++;
 					}
@@ -580,16 +651,7 @@ class SimpleDB
 					$rest->setParameter('Item.'.$ii.'.Attribute.'.$i.'.Value', $v['value']);
 					if(isset($v['replace']))
 					{
-						// Originally the code assumed $v['replace'] was a string.
-						// Some people are passing a boolean, so we'll handle both for convenience and compatibility.
-						if(is_string($v['replace']))
-						{
-							$rest->setParameter('Item.'.$ii.'.Attribute.'.$i.'.Replace', $v['replace']);
-						}
-						else
-						{
-							$rest->setParameter('Item.'.$ii.'.Attribute.'.$i.'.Replace', ($v['replace'] ? 'true' : 'false'));
-						}
+						$rest->setParameter('Item.'.$ii.'.Attribute.'.$i.'.Replace', $v['replace']);
 					}
 					$i++;
 				}
@@ -605,6 +667,12 @@ class SimpleDB
 			return false;
 		}
 		
+		if(isset($rest->body->ResponseMetadata->RequestId)) {
+			$this->RequestId = (string)($rest->body->ResponseMetadata->RequestId);
+		}
+		if(isset($rest->body->ResponseMetadata->BoxUsage)) {
+			$this->BoxUsage = (string)($rest->body->ResponseMetadata->BoxUsage);
+		}
 
 		return true;
 	}
@@ -615,28 +683,58 @@ class SimpleDB
 	* @param string  $domain The domain containing the desired item
 	* @param string  $item The desired item
 	* @param integer $attributes An array of (name => value)
-	*                             value is either a specific value or null.
-	*                             setting the value will erase the attribute with the given
-	*                             name and value (for multi-valued attributes).
-	*                            If array is unspecified, all attributes are deleted.
+	*				value is either a specific value or null.
+	*				setting the value will erase the attribute with the given
+	*				name and value (for multi-valued attributes).
+	*				If array is unspecified, all attributes are deleted.
 	* @return boolean
 	*/
-	public static function deleteAttributes($domain, $item, $attributes = null) {
+	public function deleteAttributes($domain, $item, $attributes = null, $expected) {
+		SimpleDB::__clearReturns();
+
 		$rest = new SimpleDBRequest($domain, 'DeleteAttributes', 'DELETE', self::$__accessKey);
 
 		$rest->setParameter('ItemName', $item);
 
-		if($attributes !== null)
-		{
-			$i = 0;
-			foreach($attributes as $name => $value)
-			{
+		$i = 0;
+		if($attributes !== null) {
+			foreach($attributes as $name => $value) {
 				$rest->setParameter('Attribute.'.$i.'.Name', $name);
-				if($value !== null)
-				{
+				if($value !== null)	{
 					$rest->setParameter('Attribute.'.$i.'.Value', $value);
 				}
 				$i++;
+			}
+		}
+
+		if(is_array($expected))	{
+			foreach($expected as $name => $v) {
+				if(is_array($v['value']))	{  // expected value
+					foreach($v['value'] as $val) {
+						$rest->setParameter('Expected.'.$i.'.Name', $name);
+						$rest->setParameter('Expected.'.$i.'.Value', $val);
+						$i++;
+					}
+				}	else {
+					if ($v['value']) {
+						$rest->setParameter('Expected.'.$i.'.Name', $name);
+						$rest->setParameter('Expected.'.$i.'.Value', $v['value']);
+						$i++;
+					}
+				}
+				if(is_array($v['exists']))	{
+					foreach($v['exists'] as $val) { // expected does not exist
+						$rest->setParameter('Expected.'.$i.'.Name', $name);
+						$rest->setParameter('Expected.'.$i.'.Exists', $val);
+						$i++;
+					}
+				}	else {
+					if ($v['exists']) {
+						$rest->setParameter('Expected.'.$i.'.Name', $name);
+						$rest->setParameter('Expected.'.$i.'.Exists', $v['exists']);
+						$i++;
+					}
+				}
 			}
 		}
 
@@ -648,6 +746,25 @@ class SimpleDB
 			return false;
 		}
 
+		if(isset($rest->body->ResponseMetadata->RequestId)) {
+			$this->RequestId = (string)($rest->body->ResponseMetadata->RequestId);
+		}
+		if(isset($rest->body->ResponseMetadata->BoxUsage)) {
+			$this->BoxUsage = (string)($rest->body->ResponseMetadata->BoxUsage);
+		}
+
+		return true;
+	}
+
+	/**
+	* Clear public parameters
+	*
+	*/
+	public function __clearReturns() {
+		$this->BoxUsage = null;
+		$this->RequestId = null;
+		$this->NextToken = null;
+		$this->ErrorCode = null;
 		return true;
 	}
 
@@ -658,10 +775,11 @@ class SimpleDB
 	* @param array $error Array containing error information
 	* @return string
 	*/
-	public static function __triggerError($functionname, $error)
+	public function __triggerError($functionname, $error)
 	{
 		if($error['curl'])
 		{
+			$this->ErrorCode = $error['code'];
 			trigger_error(sprintf("SimpleDB::%s(): %s", $functionname, $error['code']), E_USER_WARNING);
 		}
 		else
@@ -669,6 +787,7 @@ class SimpleDB
 			foreach($error['Errors'] as $e)
 			{
 				$message = sprintf("SimpleDB::%s(): %s: %s\n", $functionname, $e['Code'], $e['Message']);
+				$this->ErrorCode =  $e['Code'];
 				trigger_error($message, E_USER_WARNING);
 			}
 		}
@@ -708,7 +827,7 @@ final class SimpleDBRequest
 		}
 
 		$this->parameters['Action'] = $action;
-		$this->parameters['Version'] = '2007-11-07';
+		$this->parameters['Version'] = '2009-04-15';
 		$this->parameters['SignatureVersion'] = '2';
 		$this->parameters['SignatureMethod'] = 'HmacSHA256';
 		$this->parameters['AWSAccessKeyId'] = $accesskey;
@@ -770,6 +889,7 @@ final class SimpleDBRequest
 		$query = implode('&', $params);
 
 		$strtosign = $this->verb."\n".$this->sdbhost."\n/\n".$query;
+		if (debugResponse) echo("<p>".str_ireplace("&","<br>",$strtosign)."<p>");
 		$query .= '&Signature='.rawurlencode(SimpleDB::__getSignature($strtosign));
 
 		$ssl = (SimpleDB::$useSSL && extension_loaded('openssl'));
@@ -808,20 +928,23 @@ final class SimpleDBRequest
 		}
 
 		// Execute, grab errors
-		if (curl_exec($curl))
+		if (curl_exec($curl)) {
 			$this->response->code = curl_getinfo($curl, CURLINFO_HTTP_CODE);
-		else
+		} else {
 			$this->response->error = array(
 				'curl' => true,
 				'code' => curl_errno($curl),
 				'message' => curl_error($curl),
 				'resource' => $this->resource
 			);
+			$this->response->rawXML = "";
+		}
 
 		@curl_close($curl);
 
 		// Parse body into XML
 		if ($this->response->error === false && isset($this->response->body)) {
+			$this->response->rawXML = (string)$this->response->body;
 			$this->response->body = simplexml_load_string($this->response->body);
 
 			// Grab SimpleDB errors
@@ -831,8 +954,8 @@ final class SimpleDBRequest
 				foreach($this->response->body->Errors->Error as $e)
 				{
 					$err = array('Code' => (string)($e->Code),
-								 'Message' => (string)($e->Message)
-							//	 , 'BoxUsage' => (string)($e->BoxUsage)
+								 'Message' => (string)($e->Message),
+								 'BoxUsage' => (string)($e->BoxUsage)
 								 );
 					$this->response->error['Errors'][] = $err;
 				}
@@ -855,4 +978,3 @@ final class SimpleDBRequest
 		return strlen($data);
 	}
 }
-
