@@ -1,7 +1,7 @@
 <?php
 /**
 *
-* Copyright (c) 2009, Dan Myers.
+* Copyright (c) 2010, Dan Myers.
 * Parts copyright (c) 2008, Donovan Schonknecht.
 * Additional functionality by Rich Helms rich@webmasterinresidence.ca
 * All rights reserved.
@@ -45,7 +45,7 @@
 * Amazon SimpleDB PHP class
 *
 * @link http://sourceforge.net/projects/php-sdb/
-* version 0.7.0
+* version 0.7.1
 *
 */
 class SimpleDB
@@ -889,7 +889,6 @@ final class SimpleDBRequest
 		$query = implode('&', $params);
 
 		$strtosign = $this->verb."\n".$this->sdbhost."\n/\n".$query;
-		if (debugResponse) echo("<p>".str_ireplace("&","<br>",$strtosign)."<p>");
 		$query .= '&Signature='.rawurlencode(SimpleDB::__getSignature($strtosign));
 
 		$ssl = (SimpleDB::$useSSL && extension_loaded('openssl'));

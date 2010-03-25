@@ -39,3 +39,5 @@
   - Support for ConsistentRead
   - Support for conditional put and conditional delete
 
+0.7.1 (committed 2010-03-25)
+- Removed an extraneous, broken debug message
