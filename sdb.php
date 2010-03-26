@@ -529,7 +529,7 @@ class SimpleDB
 	* @param array $expected An array of (name => (value)), or (name => (exists = "false"))
 	* @return boolean
 	*/
-	public function putAttributes($domain, $item, $attributes, $expected) {
+	public function putAttributes($domain, $item, $attributes, $expected = null) {
 		SimpleDB::__clearReturns();
 
 		$rest = new SimpleDBRequest($domain, 'PutAttributes', 'POST', self::$__accessKey);
@@ -689,7 +689,7 @@ class SimpleDB
 	*				If array is unspecified, all attributes are deleted.
 	* @return boolean
 	*/
-	public function deleteAttributes($domain, $item, $attributes = null, $expected) {
+	public function deleteAttributes($domain, $item, $attributes = null, $expected = null) {
 		SimpleDB::__clearReturns();
 
 		$rest = new SimpleDBRequest($domain, 'DeleteAttributes', 'DELETE', self::$__accessKey);
@@ -780,7 +780,7 @@ class SimpleDB
 		if($error['curl'])
 		{
 			$this->ErrorCode = $error['code'];
-			trigger_error(sprintf("SimpleDB::%s(): %s", $functionname, $error['code']), E_USER_WARNING);
+			trigger_error(sprintf("SimpleDB::%s(): %s %s", $functionname, $error['code'], $error['message']), E_USER_WARNING);
 		}
 		else
 		{
