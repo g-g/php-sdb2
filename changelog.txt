@@ -41,3 +41,8 @@
 
 0.7.1 (committed 2010-03-25)
 - Removed an extraneous, broken debug message
+
+0.7.2
+Fixes suggested by afx114:
+- 'expected' parameter to putAttributes and deleteAttributes should be optional
+- Made __triggerError more informative when curl errors out
