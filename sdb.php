@@ -875,12 +875,12 @@ final class SimpleDBRequest
 			{
 				foreach($value as $v)
 				{
-					$params[] = $var.'='.rawurlencode($v);
+					$params[] = $var.'='.SimpleDBRequest::__customUrlEncode(($v);
 				}
 			}
 			else
 			{
-				$params[] = $var.'='.rawurlencode($value);
+				$params[] = $var.'='.SimpleDBRequest::__customUrlEncode(($value);
 			}
 		}
 
@@ -889,7 +889,7 @@ final class SimpleDBRequest
 		$query = implode('&', $params);
 
 		$strtosign = $this->verb."\n".$this->sdbhost."\n/\n".$query;
-		$query .= '&Signature='.rawurlencode(SimpleDB::__getSignature($strtosign));
+		$query .= '&Signature='.SimpleDBRequest::__customUrlEncode(SimpleDB::__getSignature($strtosign));
 
 		$ssl = (SimpleDB::$useSSL && extension_loaded('openssl'));
 		$url = ($ssl ? 'https://' : 'http://').$this->sdbhost.'/?'.$query;
@@ -975,5 +975,18 @@ final class SimpleDBRequest
 	private function __responseWriteCallback(&$curl, &$data) {
 		$this->response->body .= $data;
 		return strlen($data);
+	}
+
+	/**
+	* Contributed by afx114
+	* URL encode the parameters as per http://docs.amazonwebservices.com/AWSECommerceService/latest/DG/index.html?Query_QueryAuth.html
+	* PHP's rawurlencode() follows RFC 1738, not RFC 3986 as required by Amazon. The only difference is the tilde (~), so convert it back after rawurlencode
+	* See: http://www.morganney.com/blog/API/AWS-Product-Advertising-API-Requires-a-Signed-Request.php
+	*
+	* @param string $var String to encode
+	* @return string
+	*/
+	private static function __customUrlEncode($var) {
+		return str_replace('%7E', '~', rawurlencode($var));
 	}
 }

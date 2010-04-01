@@ -46,3 +46,4 @@
 Fixes suggested by afx114:
 - 'expected' parameter to putAttributes and deleteAttributes should be optional
 - Made __triggerError more informative when curl errors out
+- Use a modified rawurlencode that's compliant with RFC 3986 as required by AWS.
