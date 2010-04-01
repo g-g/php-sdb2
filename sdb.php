@@ -875,12 +875,12 @@ final class SimpleDBRequest
 			{
 				foreach($value as $v)
 				{
-					$params[] = $var.'='.SimpleDBRequest::__customUrlEncode(($v);
+					$params[] = $var.'='.self::__customUrlEncode($v);
 				}
 			}
 			else
 			{
-				$params[] = $var.'='.SimpleDBRequest::__customUrlEncode(($value);
+				$params[] = $var.'='.self::__customUrlEncode($value);
 			}
 		}
 
@@ -889,7 +889,7 @@ final class SimpleDBRequest
 		$query = implode('&', $params);
 
 		$strtosign = $this->verb."\n".$this->sdbhost."\n/\n".$query;
-		$query .= '&Signature='.SimpleDBRequest::__customUrlEncode(SimpleDB::__getSignature($strtosign));
+		$query .= '&Signature='.self::__customUrlEncode(SimpleDB::__getSignature($strtosign));
 
 		$ssl = (SimpleDB::$useSSL && extension_loaded('openssl'));
 		$url = ($ssl ? 'https://' : 'http://').$this->sdbhost.'/?'.$query;
@@ -986,7 +986,7 @@ final class SimpleDBRequest
 	* @param string $var String to encode
 	* @return string
 	*/
-	private static function __customUrlEncode($var) {
+	private function __customUrlEncode($var) {
 		return str_replace('%7E', '~', rawurlencode($var));
 	}
 }
