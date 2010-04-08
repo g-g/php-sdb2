@@ -40,10 +40,12 @@
   - Support for conditional put and conditional delete
 
 0.7.1 (committed 2010-03-25)
-- Removed an extraneous, broken debug message
+- Removed an extraneous, broken debug message (afx114)
 
 0.7.2
-Fixes suggested by afx114:
-- 'expected' parameter to putAttributes and deleteAttributes should be optional
-- Made __triggerError more informative when curl errors out
-- Use a modified rawurlencode that's compliant with RFC 3986 as required by AWS.
+- 'expected' parameter to putAttributes and deleteAttributes should be optional (afx114)
+- Made __triggerError more informative when curl errors out (afx114)
+- Use a modified rawurlencode that's compliant with RFC 3986 as required by AWS. (afx114)
+
+0.7.3
+- Corrected checking for 'value's in $expected in putAttribute and deleteAttribute. (afx114)

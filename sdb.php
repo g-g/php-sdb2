@@ -45,7 +45,7 @@
 * Amazon SimpleDB PHP class
 *
 * @link http://sourceforge.net/projects/php-sdb/
-* version 0.7.2
+* version 0.7.3
 *
 */
 class SimpleDB
@@ -548,7 +548,8 @@ class SimpleDB
 					}
 					$i++;
 				}
-			}	else {
+			}
+			else {
 				$rest->setParameter('Attribute.'.$i.'.Name', $name);
 				$rest->setParameter('Attribute.'.$i.'.Value', $v['value']);
 				if(isset($v['replace'])) {
@@ -566,25 +567,24 @@ class SimpleDB
 						$rest->setParameter('Expected.'.$i.'.Value', $val);
 						$i++;
 					}
-				}	else {
-					if ($v['value']) {
-						$rest->setParameter('Expected.'.$i.'.Name', $name);
-						$rest->setParameter('Expected.'.$i.'.Value', $v['value']);
-						$i++;
-					}
 				}
+				else if(isset($v['value'])) {
+					$rest->setParameter('Expected.'.$i.'.Name', $name);
+					$rest->setParameter('Expected.'.$i.'.Value', $v['value']);
+					$i++;
+				}
+
 				if(is_array($v['exists']))	{
 					foreach($v['exists'] as $val) { // expected does not exist
 						$rest->setParameter('Expected.'.$i.'.Name', $name);
 						$rest->setParameter('Expected.'.$i.'.Exists', $val);
 						$i++;
 					}
-				}	else {
-					if ($v['exists']) {
-						$rest->setParameter('Expected.'.$i.'.Name', $name);
-						$rest->setParameter('Expected.'.$i.'.Exists', $v['exists']);
-						$i++;
-					}
+				}
+				else if(isset($v['exists'])) {
+					$rest->setParameter('Expected.'.$i.'.Name', $name);
+					$rest->setParameter('Expected.'.$i.'.Exists', $v['exists']);
+					$i++;
 				}
 			}
 		}
@@ -697,10 +697,10 @@ class SimpleDB
 		$rest->setParameter('ItemName', $item);
 
 		$i = 0;
-		if($attributes !== null) {
+		if(isset($attributes)) {
 			foreach($attributes as $name => $value) {
 				$rest->setParameter('Attribute.'.$i.'.Name', $name);
-				if($value !== null)	{
+				if(isset($value))	{
 					$rest->setParameter('Attribute.'.$i.'.Value', $value);
 				}
 				$i++;
@@ -715,25 +715,24 @@ class SimpleDB
 						$rest->setParameter('Expected.'.$i.'.Value', $val);
 						$i++;
 					}
-				}	else {
-					if ($v['value']) {
-						$rest->setParameter('Expected.'.$i.'.Name', $name);
-						$rest->setParameter('Expected.'.$i.'.Value', $v['value']);
-						$i++;
-					}
 				}
+				else if(isset($v['value'])) {
+					$rest->setParameter('Expected.'.$i.'.Name', $name);
+					$rest->setParameter('Expected.'.$i.'.Value', $v['value']);
+					$i++;
+				}
+
 				if(is_array($v['exists']))	{
 					foreach($v['exists'] as $val) { // expected does not exist
 						$rest->setParameter('Expected.'.$i.'.Name', $name);
 						$rest->setParameter('Expected.'.$i.'.Exists', $val);
 						$i++;
 					}
-				}	else {
-					if ($v['exists']) {
-						$rest->setParameter('Expected.'.$i.'.Name', $name);
-						$rest->setParameter('Expected.'.$i.'.Exists', $v['exists']);
-						$i++;
-					}
+				}
+				else if(isset($v['exists'])) {
+					$rest->setParameter('Expected.'.$i.'.Name', $name);
+					$rest->setParameter('Expected.'.$i.'.Exists', $v['exists']);
+					$i++;
 				}
 			}
 		}
