@@ -52,6 +52,7 @@ class SimpleDB
 {
 	private static $__accessKey; // AWS Access key
 	private static $__secretKey; // AWS Secret key
+	private $__host;
 
 	public static $useSSL = true;
 	public static $verifyHost = 1;
@@ -71,10 +72,11 @@ class SimpleDB
 	* @param boolean $useSSL Enable SSL
 	* @return void
 	*/
-	public function __construct($accessKey = null, $secretKey = null, $useSSL = true) {
+	public function __construct($accessKey = null, $secretKey = null, $host = 'sdb.amazonaws.com', $useSSL = true) {
 		if ($accessKey !== null && $secretKey !== null)
 			self::setAuth($accessKey, $secretKey);
 		self::$useSSL = $useSSL;
+		self::$__host = $host;
 	}
 
 	/**
@@ -120,7 +122,7 @@ class SimpleDB
 	public function createDomain($domain) {
 		SimpleDB::__clearReturns();
 		
-		$rest = new SimpleDBRequest($domain, 'CreateDomain', 'POST', self::$__accessKey);
+		$rest = new SimpleDBRequest($domain, 'CreateDomain', 'POST', self::$__accessKey, self::$__host);
 		$rest = $rest->getResponse();
 		if ($rest->error === false && $rest->code !== 200)
 			$rest->error = array('code' => $rest->code, 'message' => 'Unexpected HTTP status');
@@ -148,7 +150,7 @@ class SimpleDB
 	public function deleteDomain($domain) {
 		SimpleDB::__clearReturns();
 
-		$rest = new SimpleDBRequest($domain, 'DeleteDomain', 'DELETE', self::$__accessKey);
+		$rest = new SimpleDBRequest($domain, 'DeleteDomain', 'DELETE', self::$__accessKey, self::$__host);
 		$rest = $rest->getResponse();
 		if ($rest->error === false && $rest->code !== 200)
 			$rest->error = array('code' => $rest->code, 'message' => 'Unexpected HTTP status');
@@ -175,7 +177,7 @@ class SimpleDB
 	public function listDomains() {
 		SimpleDB::__clearReturns();
 
-		$rest = new SimpleDBRequest('', 'ListDomains', 'GET', self::$__accessKey);
+		$rest = new SimpleDBRequest('', 'ListDomains', 'GET', self::$__accessKey, self::$__host);
 		$rest = $rest->getResponse();
 		if ($rest->error === false && $rest->code !== 200)
 			$rest->error = array('code' => $rest->code, 'message' => 'Unexpected HTTP status');
@@ -224,7 +226,7 @@ class SimpleDB
 	public function domainMetadata($domain) {
 		SimpleDB::__clearReturns();
 
-		$rest = new SimpleDBRequest($domain, 'DomainMetadata', 'GET', self::$__accessKey);
+		$rest = new SimpleDBRequest($domain, 'DomainMetadata', 'GET', self::$__accessKey, self::$__host);
 		$rest = $rest->getResponse();
 		if ($rest->error === false && $rest->code !== 200)
 			$rest->error = array('code' => $rest->code, 'message' => 'Unexpected HTTP status');
@@ -282,7 +284,7 @@ class SimpleDB
 	public function select($domain, $select, $nexttoken = null, $ConsistentRead = false) {
 		SimpleDB::__clearReturns();
 
-		$rest = new SimpleDBRequest($domain, 'Select', 'GET', self::$__accessKey);
+		$rest = new SimpleDBRequest($domain, 'Select', 'GET', self::$__accessKey, self::$__host);
 
 		if($select != '') {
 			$rest->setParameter('SelectExpression', $select);
@@ -350,7 +352,7 @@ class SimpleDB
 	* 2009-05-20: Deprecate Query and QueryWithAttributes.
 	*/
 	public static function query($domain, $query = '', $maxitems = -1, $nexttoken = null) {
-		$rest = new SimpleDBRequest($domain, 'Query', 'GET', self::$__accessKey);
+		$rest = new SimpleDBRequest($domain, 'Query', 'GET', self::$__accessKey, self::$__host);
 
 		if($query != '')
 		{
@@ -401,7 +403,7 @@ class SimpleDB
 	* 2009-05-20: Deprecate Query and QueryWithAttributes.
 	*/
 	public static function queryWithAttributes($domain, $query = '', $attributes = array(), $maxitems = -1, $nexttoken = null) {
-		$rest = new SimpleDBRequest($domain, 'QueryWithAttributes', 'GET', self::$__accessKey);
+		$rest = new SimpleDBRequest($domain, 'QueryWithAttributes', 'GET', self::$__accessKey, self::$__host);
 
 		$i = 0;
 		foreach($attributes as $a)
@@ -472,7 +474,7 @@ class SimpleDB
 	public function getAttributes($domain, $item, $attribute = null, $ConsistentRead = false) {
 		SimpleDB::__clearReturns();
 
-		$rest = new SimpleDBRequest($domain, 'GetAttributes', 'GET', self::$__accessKey);
+		$rest = new SimpleDBRequest($domain, 'GetAttributes', 'GET', self::$__accessKey, self::$__host);
 
 		$rest->setParameter('ItemName', $item);
 
@@ -532,7 +534,7 @@ class SimpleDB
 	public function putAttributes($domain, $item, $attributes, $expected = null) {
 		SimpleDB::__clearReturns();
 
-		$rest = new SimpleDBRequest($domain, 'PutAttributes', 'POST', self::$__accessKey);
+		$rest = new SimpleDBRequest($domain, 'PutAttributes', 'POST', self::$__accessKey, self::$__host);
 
 		$rest->setParameter('ItemName', $item);
 
@@ -621,7 +623,7 @@ class SimpleDB
 	public function batchPutAttributes($domain, $items) {
 		SimpleDB::__clearReturns();
 
-		$rest = new SimpleDBRequest($domain, 'BatchPutAttributes', 'POST', self::$__accessKey);
+		$rest = new SimpleDBRequest($domain, 'BatchPutAttributes', 'POST', self::$__accessKey, self::$__host);
 		
 		$ii = 0;
 		foreach($items as $item)
@@ -692,7 +694,7 @@ class SimpleDB
 	public function deleteAttributes($domain, $item, $attributes = null, $expected = null) {
 		SimpleDB::__clearReturns();
 
-		$rest = new SimpleDBRequest($domain, 'DeleteAttributes', 'DELETE', self::$__accessKey);
+		$rest = new SimpleDBRequest($domain, 'DeleteAttributes', 'DELETE', self::$__accessKey, self::$__host);
 
 		$rest->setParameter('ItemName', $item);
 

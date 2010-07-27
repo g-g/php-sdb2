@@ -49,3 +49,4 @@
 
 0.7.3
 - Corrected checking for 'value's in $expected in putAttribute and deleteAttribute. (afx114)
+- Added optional 'host' parameter to SimpleDB constructor.
