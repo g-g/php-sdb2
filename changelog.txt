@@ -50,3 +50,8 @@
 0.7.3
 - Corrected checking for 'value's in $expected in putAttribute and deleteAttribute. (afx114)
 - Added optional 'host' parameter to SimpleDB constructor.
+
+0.8.0
+- The static usage of this class was broken, and has been removed.
+- Improved the way the internal SimpleDBRequest object is built.
+- Added a callback to support automatic retries after 503 Service Temporarily Unavailable errors.

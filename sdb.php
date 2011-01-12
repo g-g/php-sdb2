@@ -45,18 +45,50 @@
 * Amazon SimpleDB PHP class
 *
 * @link http://sourceforge.net/projects/php-sdb/
-* version 0.7.3
+* version 0.8.0
 *
 */
 class SimpleDB
 {
-	private static $__accessKey; // AWS Access key
-	private static $__secretKey; // AWS Secret key
-	private $__host;
+	protected $__accessKey; // AWS Access key
+	protected $__secretKey; // AWS Secret key
+	protected $__host;
 
-	public static $useSSL = true;
-	public static $verifyHost = 1;
-	public static $verifyPeer = 1;
+	public function getAccessKey() { return $this->__accessKey; }
+	public function getSecretKey() { return $this->__secretKey; }
+	public function getHost() { return $this->__host; }
+
+	protected $__useSSL = true;
+	protected $__verifyHost = 1;
+	protected $__verifyPeer = 1;
+
+	public function useSSL() { return $this->__useSSL; }
+	public function enableUseSSL($enable = true) { $this->__useSSL = $enable; }
+
+	// verifyHost and verifyPeer determine whether curl verifies ssl certificates.
+	// It may be necessary to disable these checks on certain systems.
+	// These only have an effect if SSL is enabled.
+	public function verifyHost() { return $this->__verifyHost; }
+	public function enableVerifyHost($enable = true) { $this->__verifyHost = $enable; }
+
+	public function verifyPeer() { return $this->__verifyPeer; }
+	public function enableVerifyPeer($enable = true) { $this->__verifyPeer = $enable; }
+
+	/**
+	* Callback that determines the retry delay for "service temporarily unavailable" errors.
+	* The default behavior is to not retry.
+	*
+	* The retry delay must be a minimum of 1 second.  A zero-delay retry is not permitted.
+	* Returning <= 0 will abort the retry loop.
+	*
+	* @param $attempt The number of failed attempts so far
+	* @return The number of seconds to wait before retrying, or 0 to not retry.
+	*/
+	protected $__serviceUnavailableRetryDelayCallback = "";
+
+	// pass the name of the callback you want to use, as a string.
+	public function setServiceUnavailableRetryDelayCallback($callback) { $this->__serviceUnavailableRetryDelayCallback = $callback; }
+	public function clearServiceUnavailableRetryDelayCallback() { $this->__serviceUnavailableRetryDelayCallback = ""; }
 
 	// information related to last request
 	public $BoxUsage;
@@ -73,10 +105,11 @@ class SimpleDB
 	* @return void
 	*/
 	public function __construct($accessKey = null, $secretKey = null, $host = 'sdb.amazonaws.com', $useSSL = true) {
-		if ($accessKey !== null && $secretKey !== null)
-			self::setAuth($accessKey, $secretKey);
-		self::$useSSL = $useSSL;
-		self::$__host = $host;
+		if ($accessKey !== null && $secretKey !== null) {
+			$this->setAuth($accessKey, $secretKey);
+		}
+		$this->__useSSL = $useSSL;
+		$this->__host = $host;
 	}
 
 	/**
@@ -86,31 +119,9 @@ class SimpleDB
 	* @param string $secretKey Secret key
 	* @return void
 	*/
-	public static function setAuth($accessKey, $secretKey) {
-		self::$__accessKey = $accessKey;
-		self::$__secretKey = $secretKey;
-	}
-
-	/**
-	* Enable or disable VERIFYHOST for SSL connections
-	* Only has an effect if $useSSL is true
-	*
-	* @param boolean $enable Enable VERIFYHOST
-	* @return void
-	*/
-	public static function enableVerifyHost($enable = true) {
-		self::$verifyHost = ($enable ? 1 : 0);
-	}
-
-	/**
-	* Enable or disable VERIFYPEER for SSL connections
-	* Only has an effect if $useSSL is true
-	*
-	* @param boolean $enable Enable VERIFYPEER
-	* @return void
-	*/
-	public static function enableVerifyPeer($enable = true) {
-		self::$verifyPeer = ($enable ? 1 : 0);
+	public function setAuth($accessKey, $secretKey) {
+		$this->__accessKey = $accessKey;
+		$this->__secretKey = $secretKey;
 	}
 
 	/**
@@ -120,14 +131,14 @@ class SimpleDB
 	* @return boolean
 	*/
 	public function createDomain($domain) {
-		SimpleDB::__clearReturns();
+		$this->__clearReturns();
 		
-		$rest = new SimpleDBRequest($domain, 'CreateDomain', 'POST', self::$__accessKey, self::$__host);
+		$rest = new SimpleDBRequest($domain, 'CreateDomain', 'POST', $this);
 		$rest = $rest->getResponse();
 		if ($rest->error === false && $rest->code !== 200)
 			$rest->error = array('code' => $rest->code, 'message' => 'Unexpected HTTP status');
 		if ($rest->error !== false) {
-			SimpleDB::__triggerError('createDomain', $rest->error);
+			$this->__triggerError('createDomain', $rest->error);
 			return false;
 		}
 
@@ -148,14 +159,14 @@ class SimpleDB
 	* @return boolean
 	*/
 	public function deleteDomain($domain) {
-		SimpleDB::__clearReturns();
+		$this->__clearReturns();
 
-		$rest = new SimpleDBRequest($domain, 'DeleteDomain', 'DELETE', self::$__accessKey, self::$__host);
+		$rest = new SimpleDBRequest($domain, 'DeleteDomain', 'DELETE', $this);
 		$rest = $rest->getResponse();
 		if ($rest->error === false && $rest->code !== 200)
 			$rest->error = array('code' => $rest->code, 'message' => 'Unexpected HTTP status');
 		if ($rest->error !== false) {
-			SimpleDB::__triggerError('deleteDomain', $rest->error);
+			$this->__triggerError('deleteDomain', $rest->error);
 			return false;
 		}
 
@@ -175,14 +186,14 @@ class SimpleDB
 	* @return array | false
 	*/
 	public function listDomains() {
-		SimpleDB::__clearReturns();
+		$this->__clearReturns();
 
-		$rest = new SimpleDBRequest('', 'ListDomains', 'GET', self::$__accessKey, self::$__host);
+		$rest = new SimpleDBRequest('', 'ListDomains', 'GET', $this);
 		$rest = $rest->getResponse();
 		if ($rest->error === false && $rest->code !== 200)
 			$rest->error = array('code' => $rest->code, 'message' => 'Unexpected HTTP status');
 		if ($rest->error !== false) {
-			SimpleDB::__triggerError('listDomains', $rest->error);
+			$this->__triggerError('listDomains', $rest->error);
 			return false;
 		}
 
@@ -224,14 +235,14 @@ class SimpleDB
 	*	)
 	*/
 	public function domainMetadata($domain) {
-		SimpleDB::__clearReturns();
+		$this->__clearReturns();
 
-		$rest = new SimpleDBRequest($domain, 'DomainMetadata', 'GET', self::$__accessKey, self::$__host);
+		$rest = new SimpleDBRequest($domain, 'DomainMetadata', 'GET', $this);
 		$rest = $rest->getResponse();
 		if ($rest->error === false && $rest->code !== 200)
 			$rest->error = array('code' => $rest->code, 'message' => 'Unexpected HTTP status');
 		if ($rest->error !== false) {
-			SimpleDB::__triggerError('domainMetadata', $rest->error);
+			$this->__triggerError('domainMetadata', $rest->error);
 			return false;
 		}
 
@@ -282,9 +293,9 @@ class SimpleDB
 	* @return array | false
 	*/
 	public function select($domain, $select, $nexttoken = null, $ConsistentRead = false) {
-		SimpleDB::__clearReturns();
+		$this->__clearReturns();
 
-		$rest = new SimpleDBRequest($domain, 'Select', 'GET', self::$__accessKey, self::$__host);
+		$rest = new SimpleDBRequest($domain, 'Select', 'GET', $this);
 
 		if($select != '') {
 			$rest->setParameter('SelectExpression', $select);
@@ -301,7 +312,7 @@ class SimpleDB
 		if ($rest->error === false && $rest->code !== 200)
 			$rest->error = array('code' => $rest->code, 'message' => 'Unexpected HTTP status');
 		if ($rest->error !== false) {
-			SimpleDB::__triggerError('query', $rest->error);
+			$this->__triggerError('query', $rest->error);
 			return false;
 		}
 
@@ -351,8 +362,8 @@ class SimpleDB
 	*
 	* 2009-05-20: Deprecate Query and QueryWithAttributes.
 	*/
-	public static function query($domain, $query = '', $maxitems = -1, $nexttoken = null) {
-		$rest = new SimpleDBRequest($domain, 'Query', 'GET', self::$__accessKey, self::$__host);
+	public function query($domain, $query = '', $maxitems = -1, $nexttoken = null) {
+		$rest = new SimpleDBRequest($domain, 'Query', 'GET', $this);
 
 		if($query != '')
 		{
@@ -372,7 +383,7 @@ class SimpleDB
 		if ($rest->error === false && $rest->code !== 200)
 			$rest->error = array('code' => $rest->code, 'message' => 'Unexpected HTTP status');
 		if ($rest->error !== false) {
-			SimpleDB::__triggerError('query', $rest->error);
+			$this->__triggerError('query', $rest->error);
 			return false;
 		}
 
@@ -403,7 +414,7 @@ class SimpleDB
 	* 2009-05-20: Deprecate Query and QueryWithAttributes.
 	*/
 	public static function queryWithAttributes($domain, $query = '', $attributes = array(), $maxitems = -1, $nexttoken = null) {
-		$rest = new SimpleDBRequest($domain, 'QueryWithAttributes', 'GET', self::$__accessKey, self::$__host);
+		$rest = new SimpleDBRequest($domain, 'QueryWithAttributes', 'GET', $this);
 
 		$i = 0;
 		foreach($attributes as $a)
@@ -430,7 +441,7 @@ class SimpleDB
 		if ($rest->error === false && $rest->code !== 200)
 			$rest->error = array('code' => $rest->code, 'message' => 'Unexpected HTTP status');
 		if ($rest->error !== false) {
-			SimpleDB::__triggerError('queryWithAttributes', $rest->error);
+			$this->__triggerError('queryWithAttributes', $rest->error);
 			return false;
 		}
 
@@ -472,9 +483,9 @@ class SimpleDB
 	* @return boolean
 	*/
 	public function getAttributes($domain, $item, $attribute = null, $ConsistentRead = false) {
-		SimpleDB::__clearReturns();
+		$this->__clearReturns();
 
-		$rest = new SimpleDBRequest($domain, 'GetAttributes', 'GET', self::$__accessKey, self::$__host);
+		$rest = new SimpleDBRequest($domain, 'GetAttributes', 'GET', $this);
 
 		$rest->setParameter('ItemName', $item);
 
@@ -490,7 +501,7 @@ class SimpleDB
 		if ($rest->error === false && $rest->code !== 200)
 			$rest->error = array('code' => $rest->code, 'message' => 'Unexpected HTTP status');
 		if ($rest->error !== false) {
-			SimpleDB::__triggerError('getAttributes', $rest->error);
+			$this->__triggerError('getAttributes', $rest->error);
 			return false;
 		}
 
@@ -532,9 +543,9 @@ class SimpleDB
 	* @return boolean
 	*/
 	public function putAttributes($domain, $item, $attributes, $expected = null) {
-		SimpleDB::__clearReturns();
+		$this->__clearReturns();
 
-		$rest = new SimpleDBRequest($domain, 'PutAttributes', 'POST', self::$__accessKey, self::$__host);
+		$rest = new SimpleDBRequest($domain, 'PutAttributes', 'POST', $this);
 
 		$rest->setParameter('ItemName', $item);
 
@@ -595,7 +606,7 @@ class SimpleDB
 		if ($rest->error === false && $rest->code !== 200)
 			$rest->error = array('code' => $rest->code, 'message' => 'Unexpected HTTP status');
 		if ($rest->error !== false) {
-			SimpleDB::__triggerError('putAttributes', $rest->error);
+			$this->__triggerError('putAttributes', $rest->error);
 			return false;
 		}
 		if(isset($rest->body->ResponseMetadata->RequestId)) {
@@ -621,9 +632,9 @@ class SimpleDB
 	* @return boolean
 	*/
 	public function batchPutAttributes($domain, $items) {
-		SimpleDB::__clearReturns();
+		$this->__clearReturns();
 
-		$rest = new SimpleDBRequest($domain, 'BatchPutAttributes', 'POST', self::$__accessKey, self::$__host);
+		$rest = new SimpleDBRequest($domain, 'BatchPutAttributes', 'POST', $this);
 		
 		$ii = 0;
 		foreach($items as $item)
@@ -665,7 +676,7 @@ class SimpleDB
 		if ($rest->error === false && $rest->code !== 200)
 			$rest->error = array('code' => $rest->code, 'message' => 'Unexpected HTTP status');
 		if ($rest->error !== false) {
-			SimpleDB::__triggerError('batchPutAttributes', $rest->error);
+			$this->__triggerError('batchPutAttributes', $rest->error);
 			return false;
 		}
 		
@@ -692,9 +703,9 @@ class SimpleDB
 	* @return boolean
 	*/
 	public function deleteAttributes($domain, $item, $attributes = null, $expected = null) {
-		SimpleDB::__clearReturns();
+		$this->__clearReturns();
 
-		$rest = new SimpleDBRequest($domain, 'DeleteAttributes', 'DELETE', self::$__accessKey, self::$__host);
+		$rest = new SimpleDBRequest($domain, 'DeleteAttributes', 'DELETE', $this);
 
 		$rest->setParameter('ItemName', $item);
 
@@ -743,7 +754,7 @@ class SimpleDB
 		if ($rest->error === false && $rest->code !== 200)
 			$rest->error = array('code' => $rest->code, 'message' => 'Unexpected HTTP status');
 		if ($rest->error !== false) {
-			SimpleDB::__triggerError('deleteAttributes', $rest->error);
+			$this->__triggerError('deleteAttributes', $rest->error);
 			return false;
 		}
 
@@ -795,20 +806,25 @@ class SimpleDB
 	}
 
 	/**
-	* Generate the auth string using Hmac-SHA256
+	* Callback handler for 503 retries.
 	*
-	* @internal Used by SimpleDBRequest::getResponse()
-	* @param string $string String to sign
-	* @return string
+	* @internal Used by SimpleDBRequest to call the user-specified callback, if set
+	* @param $attempt The number of failed attempts so far
+	* @return The retry delay in seconds, or 0 to stop retrying.
 	*/
-	public static function __getSignature($string) {
-		return base64_encode(hash_hmac('sha256', $string, self::$__secretKey, true));
+	public function __executeServiceTemporarilyUnavailableRetryDelay($attempt)
+	{
+		if(strlen($this->__serviceUnavailableRetryDelayCallback) > 0) {
+			$callback = $this->__serviceUnavailableRetryDelayCallback;
+			return $callback($attempt);
+		}
+		return 0;
 	}
 }
 
 final class SimpleDBRequest
 {
-	private $sdbhost, $verb, $resource = '', $parameters = array();
+	private $sdb, $verb, $resource = '', $parameters = array();
 	public $response;
 
 	/**
@@ -821,7 +837,7 @@ final class SimpleDBRequest
 	* @param string $host The URL of the SimpleDB host
 	* @return mixed
 	*/
-	function __construct($domain, $action, $verb, $accesskey, $host = 'sdb.amazonaws.com') {
+	function __construct($domain, $action, $verb, $sdb) {
 		if($domain != '')
 		{
 			$this->parameters['DomainName'] = $domain;
@@ -831,10 +847,10 @@ final class SimpleDBRequest
 		$this->parameters['Version'] = '2009-04-15';
 		$this->parameters['SignatureVersion'] = '2';
 		$this->parameters['SignatureMethod'] = 'HmacSHA256';
-		$this->parameters['AWSAccessKeyId'] = $accesskey;
+		$this->parameters['AWSAccessKeyId'] = $sdb->getAccessKey();
 
 		$this->verb = $verb;
-		$this->sdbhost = $host;
+		$this->sdb = $sdb;
 		$this->response = new STDClass;
 		$this->response->error = false;
 	}
@@ -889,20 +905,20 @@ final class SimpleDBRequest
 
 		$query = implode('&', $params);
 
-		$strtosign = $this->verb."\n".$this->sdbhost."\n/\n".$query;
-		$query .= '&Signature='.self::__customUrlEncode(SimpleDB::__getSignature($strtosign));
+		$strtosign = $this->verb."\n".$this->sdb->getHost()."\n/\n".$query;
+		$query .= '&Signature='.self::__customUrlEncode(self::__getSignature($strtosign));
 
-		$ssl = (SimpleDB::$useSSL && extension_loaded('openssl'));
-		$url = ($ssl ? 'https://' : 'http://').$this->sdbhost.'/?'.$query;
+		$ssl = ($this->sdb->useSSL() && extension_loaded('openssl'));
+		$url = ($ssl ? 'https://' : 'http://').$this->sdb->getHost().'/?'.$query;
 
 		// Basic setup
 		$curl = curl_init();
 		curl_setopt($curl, CURLOPT_USERAGENT, 'SimpleDB/php');
 
-		if(SimpleDB::$useSSL)
+		if($ssl)
 		{
-			curl_setopt($curl, CURLOPT_SSL_VERIFYHOST, SimpleDB::$verifyHost);
-			curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, SimpleDB::$verifyPeer);
+			curl_setopt($curl, CURLOPT_SSL_VERIFYHOST, ($this->sdb->verifyHost() ? 1 : 0));
+			curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, ($this->sdb->verifyPeer() ? 1 : 0));
 		}
 
 		curl_setopt($curl, CURLOPT_URL, $url);
@@ -927,18 +943,32 @@ final class SimpleDBRequest
 			default: break;
 		}
 
-		// Execute, grab errors
-		if (curl_exec($curl)) {
-			$this->response->code = curl_getinfo($curl, CURLINFO_HTTP_CODE);
-		} else {
-			$this->response->error = array(
-				'curl' => true,
-				'code' => curl_errno($curl),
-				'message' => curl_error($curl),
-				'resource' => $this->resource
-			);
-			$this->response->rawXML = "";
-		}
+		$retry = 0;
+		$attempts = 0;
+		do
+		{
+			$retry = 0;
+			// Execute, grab errors
+			if (curl_exec($curl)) {
+				$this->response->code = curl_getinfo($curl, CURLINFO_HTTP_CODE);
+
+				if($this->response->code == 503) {
+					$attempts++;
+					$retry = $this->sdb->__executeServiceTemporarilyUnavailableRetryDelay($attempts);
+					if($retry > 0) {
+						sleep($retry);
+					}
+				}
+			} else {
+				$this->response->error = array(
+					'curl' => true,
+					'code' => curl_errno($curl),
+					'message' => curl_error($curl),
+					'resource' => $this->resource
+				);
+				$this->response->rawXML = "";
+			}
+		} while($retry > 0);
 
 		@curl_close($curl);
 
@@ -989,5 +1019,16 @@ final class SimpleDBRequest
 	*/
 	private function __customUrlEncode($var) {
 		return str_replace('%7E', '~', rawurlencode($var));
+	}
+
+	/**
+	* Generate the auth string using Hmac-SHA256
+	*
+	* @internal Used by SimpleDBRequest::getResponse()
+	* @param string $string String to sign
+	* @return string
+	*/
+	private function __getSignature($string) {
+		return base64_encode(hash_hmac('sha256', $string, $this->sdb->getSecretKey(), true));
 	}
 }
