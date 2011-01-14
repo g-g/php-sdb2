@@ -50,6 +50,9 @@
 */
 class SimpleDB
 {
+	const MAX_ITEM_BATCH_SIZE = 25;
+
+
 	protected $__accessKey; // AWS Access key
 	protected $__secretKey; // AWS Secret key
 	protected $__host;
@@ -75,18 +78,19 @@ class SimpleDB
 	public function enableVerifyPeer($enable = true) { $this->__verifyPeer = $enable; }
 
 	/**
-	* Callback that determines the retry delay for "service temporarily unavailable" errors.
+	* Callback that determines the retry delay for "service temporarily unavailable" errors, in microseconds.
 	* The default behavior is to not retry.
 	*
-	* The retry delay must be a minimum of 1 second.  A zero-delay retry is not permitted.
+	* The retry delay must be a minimum of 1 microsecond.  A zero-delay retry is not permitted.
 	* Returning <= 0 will abort the retry loop.
 	*
 	* @param $attempt The number of failed attempts so far
-	* @return The number of seconds to wait before retrying, or 0 to not retry.
+	* @return The number of microseconds to wait before retrying, or 0 to not retry.
 	*/
 	protected $__serviceUnavailableRetryDelayCallback = "";
 
-	// pass the name of the callback you want to use, as a string.
+	// pass the name of the callback you want to use, as a callable.
+	// @see http://www.php.net/manual/en/language.pseudo-types.php#language.types.callback
 	public function setServiceUnavailableRetryDelayCallback($callback) { $this->__serviceUnavailableRetryDelayCallback = $callback; }
 	public function clearServiceUnavailableRetryDelayCallback() { $this->__serviceUnavailableRetryDelayCallback = ""; }
 
@@ -97,7 +101,7 @@ class SimpleDB
 	public $ErrorCode;
 
 	/**
-	* Constructor - if you're not using the class statically
+	* Constructor - this class may not be used statically.
 	*
 	* @param string $accessKey Access key
 	* @param string $secretKey Secret key
@@ -282,11 +286,11 @@ class SimpleDB
 	}
 
 	/**
-	* Evaluate a select expression on a domain
+	* Evaluate a select expression
 	*
 	* Function provided by Matthew Lanham
 	*
-	* @param string  $domain The domain being queried
+	* @param string  $domain This argument must be an empty string.  It is present only for backward-compatibility.
 	* @param string  $select The select expression to evaluate.
 	* @param string  $nexttoken The token to start from when retrieving results
 	* @param boolean ConsistentRead - force consistent read = true
@@ -413,7 +417,7 @@ class SimpleDB
 	*
 	* 2009-05-20: Deprecate Query and QueryWithAttributes.
 	*/
-	public static function queryWithAttributes($domain, $query = '', $attributes = array(), $maxitems = -1, $nexttoken = null) {
+	public function queryWithAttributes($domain, $query = '', $attributes = array(), $maxitems = -1, $nexttoken = null) {
 		$rest = new SimpleDBRequest($domain, 'QueryWithAttributes', 'GET', $this);
 
 		$i = 0;
@@ -536,14 +540,21 @@ class SimpleDB
 	* @param string  $domain The domain containing the desired item
 	* @param string  $item The desired item
 	* @param array $attributes An array of (name => (value [, replace])),
-	*							 where replace is a boolean of whether to replace the item.
-	*							 replace is optional, and defaults to false.
-	*							 If value is an array, multiple values are put.
+	*							where replace is a boolean of whether to replace the item.
+	*							replace is optional, and defaults to $defaultReplace (below).
+	*							If value is an array, multiple values are put.
 	* @param array $expected An array of (name => (value)), or (name => (exists = "false"))
+	* @param boolean $defaultReplace Specifies the default value to use for 'replace'
+	*							for each attribute.  Defaults to false. Setting this to true
+	*							will cause all attributes to replace any existing attributes.
 	* @return boolean
 	*/
-	public function putAttributes($domain, $item, $attributes, $expected = null) {
+	public function putAttributes($domain, $item, $attributes, $expected = null, $defaultReplace = false) {
 		$this->__clearReturns();
+
+		if($defaultReplace) {
+			$attributes = $this->addMissingReplaceFlags($attributes);
+		}
 
 		$rest = new SimpleDBRequest($domain, 'PutAttributes', 'POST', $this);
 
@@ -620,8 +631,8 @@ class SimpleDB
 	}
 
 	/**
-	* Create or update attributes on multiple item
-	* MAX 35 items per write (SimpleDB limit)
+	* Create or update attributes on multiple items
+	* MAX 25 items per write (SimpleDB limit)
 	*
 	* Function provided by Matthew Lanham
 	*
@@ -629,10 +640,29 @@ class SimpleDB
 	* @param array  $items An array of items of (item_name, attributes => array(attribute_name => array(value [, replace])))
 	*	If replace is omitted it defaults to false.
 	*	Optionally, attributes may just be a single string value, and replace will default to false.
+	* @param boolean $defaultReplace Specifies the default value to use for 'replace'
+	*							for each attribute.  Defaults to false. Setting this to true
+	*							will cause all attributes to replace any existing attributes.
 	* @return boolean
 	*/
-	public function batchPutAttributes($domain, $items) {
+	public function batchPutAttributes($domain, $items, $defaultReplace = false) {
+		if(count($items) > SimpleDB::MAX_ITEM_BATCH_SIZE) {
+			$message = 'The maximum number of attributes in batchPutAttributes is '.SimpleDB::MAX_ITEM_BATCH_SIZE;
+			$message .= ', but '.count($items).' items were provided.  Aborting the call.';
+			$error = array('Code' => 0, 'Message' => $message);
+			$this->__triggerError('batchPutAttributes', array('curl' => false, "Errors" => array($error)));
+			return false;
+		}
+
 		$this->__clearReturns();
+
+		if($defaultReplace) {
+			$updatedItems = array();
+			foreach($items as $name => $attributes) {
+				$updatedItems[$name] = $this->addMissingReplaceFlags($attributes);
+			}
+			$items = $updatedItems;
+		}
 
 		$rest = new SimpleDBRequest($domain, 'BatchPutAttributes', 'POST', $this);
 		
@@ -769,6 +799,20 @@ class SimpleDB
 	}
 
 	/**
+	* Fills in the 'replace' flag for each value in an attributes array.
+	*/
+	private function addMissingReplaceFlags($attributes, $defaultReplace = true) {
+		$fixed = array();
+		foreach($attributes as $name => $v) {
+			$replace = (isset($v['replace']) ? $v['replace'] : $defaultReplace);
+			// this should work whether or not $v['value'] is an array
+			$newval = array('value' => $v['value'], 'replace' => $replace);
+			$fixed[$name] = $newval;
+		}
+		return $fixed;
+	}
+
+	/**
 	* Clear public parameters
 	*
 	*/
@@ -810,11 +854,11 @@ class SimpleDB
 	*
 	* @internal Used by SimpleDBRequest to call the user-specified callback, if set
 	* @param $attempt The number of failed attempts so far
-	* @return The retry delay in seconds, or 0 to stop retrying.
+	* @return The retry delay in microseconds, or 0 to stop retrying.
 	*/
 	public function __executeServiceTemporarilyUnavailableRetryDelay($attempt)
 	{
-		if(strlen($this->__serviceUnavailableRetryDelayCallback) > 0) {
+		if(is_callable($this->__serviceUnavailableRetryDelayCallback)) {
 			$callback = $this->__serviceUnavailableRetryDelayCallback;
 			return $callback($attempt);
 		}
@@ -892,12 +936,12 @@ final class SimpleDBRequest
 			{
 				foreach($value as $v)
 				{
-					$params[] = $var.'='.self::__customUrlEncode($v);
+					$params[] = $var.'='.$this->__customUrlEncode($v);
 				}
 			}
 			else
 			{
-				$params[] = $var.'='.self::__customUrlEncode($value);
+				$params[] = $var.'='.$this->__customUrlEncode($value);
 			}
 		}
 
@@ -906,7 +950,7 @@ final class SimpleDBRequest
 		$query = implode('&', $params);
 
 		$strtosign = $this->verb."\n".$this->sdb->getHost()."\n/\n".$query;
-		$query .= '&Signature='.self::__customUrlEncode(self::__getSignature($strtosign));
+		$query .= '&Signature='.$this->__customUrlEncode($this->__getSignature($strtosign));
 
 		$ssl = ($this->sdb->useSSL() && extension_loaded('openssl'));
 		$url = ($ssl ? 'https://' : 'http://').$this->sdb->getHost().'/?'.$query;
@@ -956,7 +1000,7 @@ final class SimpleDBRequest
 					$attempts++;
 					$retry = $this->sdb->__executeServiceTemporarilyUnavailableRetryDelay($attempts);
 					if($retry > 0) {
-						sleep($retry);
+						usleep($retry);
 					}
 				}
 			} else {
