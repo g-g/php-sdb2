@@ -55,3 +55,4 @@
 - The static usage of this class was broken, and has been removed.
 - Improved the way the internal SimpleDBRequest object is built.
 - Added a callback to support automatic retries after 503 Service Temporarily Unavailable errors.
+- Added error checking and a constant for the max batch size in batchPutAttributes.
