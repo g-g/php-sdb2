@@ -45,13 +45,12 @@
 * Amazon SimpleDB PHP class
 *
 * @link http://sourceforge.net/projects/php-sdb/
-* version 0.8.0
+* version 0.8.1
 *
 */
 class SimpleDB
 {
 	const MAX_ITEM_BATCH_SIZE = 25;
-
 
 	protected $__accessKey; // AWS Access key
 	protected $__secretKey; // AWS Secret key
@@ -801,7 +800,7 @@ class SimpleDB
 	/**
 	* Fills in the 'replace' flag for each value in an attributes array.
 	*/
-	private function addMissingReplaceFlags($attributes, $defaultReplace = true) {
+	private function addMissingReplaceFlags($attributes, $defaultReplace = 'true') {
 		$fixed = array();
 		foreach($attributes as $name => $v) {
 			$replace = (isset($v['replace']) ? $v['replace'] : $defaultReplace);

@@ -56,3 +56,6 @@
 - Improved the way the internal SimpleDBRequest object is built.
 - Added a callback to support automatic retries after 503 Service Temporarily Unavailable errors.
 - Added error checking and a constant for the max batch size in batchPutAttributes.
+
+0.8.1
+- Fixed the new defaultReplace flag (added in 0.8.0 but not documented).
