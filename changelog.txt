@@ -59,3 +59,6 @@
 
 0.8.1
 - Fixed the new defaultReplace flag (added in 0.8.0 but not documented).
+
+0.8.2
+- Fixed the way the retry callback was being called.

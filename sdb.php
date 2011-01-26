@@ -45,7 +45,7 @@
 * Amazon SimpleDB PHP class
 *
 * @link http://sourceforge.net/projects/php-sdb/
-* version 0.8.1
+* version 0.8.2
 *
 */
 class SimpleDB
@@ -858,8 +858,7 @@ class SimpleDB
 	public function __executeServiceTemporarilyUnavailableRetryDelay($attempt)
 	{
 		if(is_callable($this->__serviceUnavailableRetryDelayCallback)) {
-			$callback = $this->__serviceUnavailableRetryDelayCallback;
-			return $callback($attempt);
+			return call_user_function($this->__serviceUnavailableRetryDelayCallback, $attempt);
 		}
 		return 0;
 	}
