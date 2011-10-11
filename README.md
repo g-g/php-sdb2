@@ -122,9 +122,11 @@ Submitting bugs and feature requests
 ------------------------------------
 
 Bugs and feature request are tracked on [GitHub](https://github.com/g-g/php-sdb2/issues)
+PRs are welcome ;-)
 
 Authors, copyright and license
 ------------------------------
-See the [LICENSE file](https://github.com/g-g/php-sdb2/blob/master/license) for details on the license and copyrights
 
-php-sdb2 is licensed under a modified BSD license - 
+php-sdb2 is licensed under a modified BSD license.
+See the [LICENSE file](https://github.com/g-g/php-sdb2/blob/master/LICENSE) for details on the license and copyrights.
+
