@@ -62,3 +62,17 @@
 
 0.8.2
 - Fixed the way the retry callback was being called.
+
+1.0.beta1
+- Major rework
+- Unit tests
+- Incompatibilities: select and batchPutAttributes have changed.
+- New queueDelete and queuePutAttribute methods have been added, see https://github.com/g-g/php-sdb2/examples/queuePutAttributes.php
+- A getInstance method provides a singe class for all connections that share aws key and host
+- A total box usage feature that sums up the box usage time over the lifetime of the connection object
+- Added a batchDeleteAttributes method
+- Fixed the service unavailable callback function and provided a default callback
+- Internal code refactoring
+- The code is now name spaced g_g/php_sdb2
+- The error handling has changed. You can choose between exception, user warning, user error or just ignore
+- Many others

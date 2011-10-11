@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit colors="true">
+    <testsuites>
+        <testsuite name="php-sdb2 Test Suite">
+            <directory>g_g/php_sdb2</directory>
+        </testsuite>
+    </testsuites>
+    <filter>
+        <whitelist>
+            <directory suffix=".php">../src/g_g/php_sdb2/</directory>
+        </whitelist>
+    </filter>
+    <php>
+        <!-- set LIVE_TEST to "yes" to test against a real SimpleDB instance at Amazon's -->
+        <const name="LIVE_TEST" value="no" />
+        <const name="AWS_KEY" value="" />
+        <const name="AWS_SECRET_KEY" value="" />
+        <const name="AWS_HOST" value="sdb.amazonaws.com" />
+        <!-- The live test needs two domains. Define their names here -->
+        <const name="DOMAIN1" value="TEST_DOMAIN1" />
+        <const name="DOMAIN2" value="TEST_DOMAIN2" />
+        <!-- Waiting time for consistent data if the next operation doe not support consistent read (i.e. DomainMetadata, ...) in ms -->
+        <const name="WAIT_FOR_CONSISTENCY" value="500" />
+    </php>
+</phpunit>
