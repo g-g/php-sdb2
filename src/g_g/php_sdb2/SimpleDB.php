@@ -640,6 +640,13 @@ class SimpleDB {
         return $result;
     }
 
+    /**
+     * Queue a delete operation to minimize the number of connections to AWS SimpleDB
+     * 
+     * @param string $domain
+     * @param string $itemName
+     * @return boolean 
+     */
     public function queueDelete($domain, $itemName) {
         $this->_checkDomainName($domain, 'queueDelete');
         $this->_itemsToDelete[$domain][$itemName] = null;
@@ -649,6 +656,12 @@ class SimpleDB {
         return true;
     }
 
+    /**
+     * This sends all delete commands in the queue and clears it
+     * 
+     * @param string $domain
+     * @return boolean 
+     */
     public function flushDeleteQueue($domain) {
         $this->_checkDomainName($domain, 'flushDeleteQueue');
         $result = true;
@@ -659,6 +672,15 @@ class SimpleDB {
         return $result;
     }
 
+    /**
+     * Queue a putAttributes operation to minimize the number of connections to AWS SimpleDB
+     *
+     * @param string $domain
+     * @param string $name
+     * @param array $attributes
+     * @param boolean $replace
+     * @return boolean 
+     */
     public function queuePutAttributes($domain, $name, $attributes, $replace = false) {
         $this->_checkDomainName($domain, 'queuePutAttributes');
         $this->_itemsToWrite[$domain][$name] = $replace ? $this->_addMissingReplaceFlags($attributes, true) : $attributes;
@@ -668,6 +690,12 @@ class SimpleDB {
         return true;
     }
 
+    /**
+     * This sends all putAttributes commands in the queue and clears it
+     * 
+     * @param string $domain
+     * @return boolean 
+     */
     public function flushPutAttributesQueue($domain) {
         $this->_checkDomainName($domain, 'flushPutAttributesQueue');
         $result = true;
@@ -678,6 +706,11 @@ class SimpleDB {
         return $result;
     }
 
+    /**
+     * Send all items in all putAttribute queues and clear them
+     *
+     * @return boolean
+     */
     public function flushPutAttributesQueues() {
         $result = true;
         foreach ($this->_itemsToWrite as $domain => $items) {
@@ -688,6 +721,12 @@ class SimpleDB {
         return $result;
     }
 
+    /**
+     * Delete all items in all delete queues and clear them
+     *
+     * @return boolean
+     */
+   
     public function flushDeleteQueues() {
         $result = true;
         foreach ($this->_itemsToDelete as $domain => $items) {
@@ -698,6 +737,11 @@ class SimpleDB {
         return $result;
     }
 
+    /**
+     * Send all items in all queues and clear them
+     *
+     * @return boolean
+     */
     public function flushQueues() {
         $result = true;
         $result = $result && $this->flushPutAttributesQueues();
@@ -705,6 +749,16 @@ class SimpleDB {
         return $result;
     }
 
+    /**
+     * Check if the domain name is valid
+     * 
+     * @param type $domain
+     * @return type 
+     */
+    public function validDomainName($domain){
+        return preg_match('/^[-a-zA-Z0-9_.]{3,255}$/', $domain);
+    }
+    
     /**
      * Checks the response for errors and sets RequestId and BoxUsage
      * 
@@ -906,16 +960,6 @@ class SimpleDB {
         if (!$this->validDomainName($domain)) {
             $this->_triggerError(new SimpleDBError(array(array('method' => $caller, 'code' => 'InvalidDomainName', 'message' => 'The domain name "' . $domain . '" is invalid.'))));
         }
-    }
-    
-    /**
-     * Check if the domain name is valid
-     * 
-     * @param type $domain
-     * @return type 
-     */
-    public function validDomainName($domain){
-        return preg_match('/^[-a-zA-Z0-9_.]{3,255}$/', $domain);
     }
     
     

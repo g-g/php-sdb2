@@ -77,12 +77,12 @@
           <td class="coverBar" align="center" width="100">
             <table border="0" cellspacing="0" cellpadding="1">
               <tr>
-                <td class="coverBarOutline"><img src="chameleon.png" width="81" height="10" alt="81.37%"><img src="snow.png" width="19" height="10" alt="81.37%"></td>
+                <td class="coverBarOutline"><img src="chameleon.png" width="88" height="10" alt="88.24%"><img src="snow.png" width="12" height="10" alt="88.24%"></td>
               </tr>
             </table>
           </td>
-          <td class="coverPerHi">81.37%</td>
-          <td class="coverNumHi">83 / 102</td>
+          <td class="coverPerHi">88.24%</td>
+          <td class="coverNumHi">90 / 102</td>
         </tr>
 
         <tr>
@@ -112,12 +112,12 @@
           <td class="coverBar" align="center" width="100">
             <table border="0" cellspacing="0" cellpadding="1">
               <tr>
-                <td class="coverBarOutline"><img src="chameleon.png" width="81" height="10" alt="81.37%"><img src="snow.png" width="19" height="10" alt="81.37%"></td>
+                <td class="coverBarOutline"><img src="chameleon.png" width="88" height="10" alt="88.24%"><img src="snow.png" width="12" height="10" alt="88.24%"></td>
               </tr>
             </table>
           </td>
-          <td class="coverPerHi">81.37%</td>
-          <td class="coverNumHi">83 / 102</td>
+          <td class="coverPerHi">88.24%</td>
+          <td class="coverNumHi">90 / 102</td>
         </tr>
 
         <tr>
@@ -177,16 +177,16 @@
           </td>
           <td class="coverPerLo">0.00%</td>
           <td class="coverNumLo">0 / 1</td>
-          <td class="crap">30.81</td>
+          <td class="crap">26.73</td>
           <td class="coverBar" align="center" width="100">
             <table border="0" cellspacing="0" cellpadding="1">
               <tr>
-                <td class="coverBarOutline"><img src="chameleon.png" width="80" height="10" alt="80.77%"><img src="snow.png" width="20" height="10" alt="80.77%"></td>
+                <td class="coverBarOutline"><img src="chameleon.png" width="89" height="10" alt="89.74%"><img src="snow.png" width="11" height="10" alt="89.74%"></td>
               </tr>
             </table>
           </td>
-          <td class="coverPerHi">80.77%</td>
-          <td class="coverNumHi">63 / 78</td>
+          <td class="coverPerHi">89.74%</td>
+          <td class="coverNumHi">70 / 78</td>
         </tr>
 
         <tr>
@@ -413,13 +413,13 @@
 <span class="lineNum" id="container140"><a name="140"></a><a href="#140" id="line140">     140</a> </span><span class="lineCov">             13 :                 $this-&gt;response-&gt;code = curl_getinfo($curl, CURLINFO_HTTP_CODE);                                                                             </span>
 <span class="lineNum" id="container141"><a name="141"></a><a href="#141" id="line141">     141</a> </span>                :                                                                                                                                                              
 <span class="lineNum" id="container142"><a name="142"></a><a href="#142" id="line142">     142</a> </span><span class="lineCov">             13 :                 if ($this-&gt;response-&gt;code == 503) {                                                                                                          </span>
-<span class="lineNum" id="container143"><a name="143"></a><a href="#143" id="line143">     143</a> </span><span class="lineNoCov">              0 :                     $attempts++;                                                                                                                             </span>
-<span class="lineNum" id="container144"><a name="144"></a><a href="#144" id="line144">     144</a> </span><span class="lineNoCov">              0 :                     $retry = $this-&gt;sdb-&gt;executeServiceTemporarilyUnavailableRetryDelay($attempts);                                                          </span>
-<span class="lineNum" id="container145"><a name="145"></a><a href="#145" id="line145">     145</a> </span><span class="lineNoCov">              0 :                     if ($retry &gt; 0) {                                                                                                                        </span>
-<span class="lineNum" id="container146"><a name="146"></a><a href="#146" id="line146">     146</a> </span><span class="lineNoCov">              0 :                         usleep($retry);                                                                                                                      </span>
-<span class="lineNum" id="container147"><a name="147"></a><a href="#147" id="line147">     147</a> </span><span class="lineNoCov">              0 :                         $this-&gt;response-&gt;body = '';                                                                                                          </span>
-<span class="lineNum" id="container148"><a name="148"></a><a href="#148" id="line148">     148</a> </span><span class="lineNoCov">              0 :                     }                                                                                                                                        </span>
-<span class="lineNum" id="container149"><a name="149"></a><a href="#149" id="line149">     149</a> </span><span class="lineNoCov">              0 :                 }                                                                                                                                            </span>
+<span class="lineNum" id="container143"><a name="143"></a><a href="#143" id="line143">     143</a> </span><span class="lineCov">              1 :                     $attempts++;                                                                                                                             </span>
+<span class="lineNum" id="container144"><a name="144"></a><a href="#144" id="line144">     144</a> </span><span class="lineCov">              1 :                     $retry = $this-&gt;sdb-&gt;executeServiceTemporarilyUnavailableRetryDelay($attempts);                                                          </span>
+<span class="lineNum" id="container145"><a name="145"></a><a href="#145" id="line145">     145</a> </span><span class="lineCov">              1 :                     if ($retry &gt; 0) {                                                                                                                        </span>
+<span class="lineNum" id="container146"><a name="146"></a><a href="#146" id="line146">     146</a> </span><span class="lineCov">              1 :                         usleep($retry);                                                                                                                      </span>
+<span class="lineNum" id="container147"><a name="147"></a><a href="#147" id="line147">     147</a> </span><span class="lineCov">              1 :                         $this-&gt;response-&gt;body = '';                                                                                                          </span>
+<span class="lineNum" id="container148"><a name="148"></a><a href="#148" id="line148">     148</a> </span><span class="lineCov">              1 :                     }                                                                                                                                        </span>
+<span class="lineNum" id="container149"><a name="149"></a><a href="#149" id="line149">     149</a> </span><span class="lineCov">              1 :                 }                                                                                                                                            </span>
 <span class="lineNum" id="container150"><a name="150"></a><a href="#150" id="line150">     150</a> </span><span class="lineCov">             13 :             } else {                                                                                                                                         </span>
 <span class="lineNum" id="container151"><a name="151"></a><a href="#151" id="line151">     151</a> </span><span class="lineNoCov">              0 :                 $errors-&gt;addError($this-&gt;parameters['Action'], curl_errno($curl), curl_error($curl),$this-&gt;resource);                                        </span>
 <span class="lineNum" id="container152"><a name="152"></a><a href="#152" id="line152">     152</a> </span><span class="lineNoCov">              0 :                 $this-&gt;response-&gt;rawXML = &quot;&quot;;                                                                                                                </span>
@@ -497,7 +497,7 @@
 
     <table width="100%" border="0" cellspacing="0" cellpadding="0">
       <tr><td class="ruler"><img src="glass.png" width="3" height="3" alt=""></td></tr>
-      <tr><td class="versionInfo">Generated by <a href="http://github.com/sebastianbergmann/php-code-coverage" target="_top">PHP_CodeCoverage 1.0.5</a> using <a href="http://www.php.net/" target="_top">PHP 5.3.5-1ubuntu7.2</a> and PHPUnit 3.5.15 at Tue Oct 11 20:49:16 CEST 2011.</td></tr>
+      <tr><td class="versionInfo">Generated by <a href="http://github.com/sebastianbergmann/php-code-coverage" target="_top">PHP_CodeCoverage 1.0.5</a> using <a href="http://www.php.net/" target="_top">PHP 5.3.5-1ubuntu7.2</a> and PHPUnit 3.5.15 at Tue Oct 11 21:45:04 CEST 2011.</td></tr>
     </table>
 
     <br />
@@ -805,6 +805,41 @@
         "panel142": {
           "header": "13 tests cover line 142",
           "body": "<ul><li class=\"testPassed\">SimpleDBTest::testCreateDomain</li><li class=\"testPassed\">SimpleDBTest::testDomainMetadata</li><li class=\"testPassed\">SimpleDBTest::testListDomains</li><li class=\"testPassed\">SimpleDBTest::testPutAttributes</li><li class=\"testPassed\">SimpleDBTest::testGetAttributes</li><li class=\"testPassed\">SimpleDBTest::testDeleteAttributes</li><li class=\"testPassed\">SimpleDBTest::testBatchPutAttributes</li><li class=\"testPassed\">SimpleDBTest::testSelect</li><li class=\"testPassed\">SimpleDBTest::testBatchDeleteAttributes</li><li class=\"testPassed\">SimpleDBTest::testQueueDelete</li><li class=\"testPassed\">SimpleDBTest::testDeleteWhere</li><li class=\"testPassed\">SimpleDBTest::testQueuePutAttributes</li><li class=\"testPassed\">SimpleDBTest::testDeleteDomain</li></ul>",
+          "footer": ""
+        },
+        "panel143": {
+          "header": "1 test covers line 143",
+          "body": "<ul><li class=\"testPassed\">SimpleDBTest::testCreateDomain</li></ul>",
+          "footer": ""
+        },
+        "panel144": {
+          "header": "1 test covers line 144",
+          "body": "<ul><li class=\"testPassed\">SimpleDBTest::testCreateDomain</li></ul>",
+          "footer": ""
+        },
+        "panel145": {
+          "header": "1 test covers line 145",
+          "body": "<ul><li class=\"testPassed\">SimpleDBTest::testCreateDomain</li></ul>",
+          "footer": ""
+        },
+        "panel146": {
+          "header": "1 test covers line 146",
+          "body": "<ul><li class=\"testPassed\">SimpleDBTest::testCreateDomain</li></ul>",
+          "footer": ""
+        },
+        "panel147": {
+          "header": "1 test covers line 147",
+          "body": "<ul><li class=\"testPassed\">SimpleDBTest::testCreateDomain</li></ul>",
+          "footer": ""
+        },
+        "panel148": {
+          "header": "1 test covers line 148",
+          "body": "<ul><li class=\"testPassed\">SimpleDBTest::testCreateDomain</li></ul>",
+          "footer": ""
+        },
+        "panel149": {
+          "header": "1 test covers line 149",
+          "body": "<ul><li class=\"testPassed\">SimpleDBTest::testCreateDomain</li></ul>",
           "footer": ""
         },
         "panel150": {

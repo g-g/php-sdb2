@@ -121,7 +121,8 @@ Requirements
 Submitting bugs and feature requests
 ------------------------------------
 
-Bugs and feature request are tracked on [GitHub](https://github.com/g-g/php-sdb2/issues)
+Bugs and feature request are tracked on [GitHub](https://github.com/g-g/php-sdb2/issues).
+
 PRs are welcome ;-)
 
 Authors, copyright and license
