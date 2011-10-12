@@ -79,22 +79,28 @@ class SimpleDBTest extends PHPUnit_Framework_TestCase {
         $this->assertTrue($sdb2 instanceof SimpleDB);
         $this->assertFalse($sdb == $sdb2);
     }
-    
-    public function testDomainNameSanity(){
+
+    public function testDomainNameSanity() {
         $sdb = SimpleDBTestClass::getInstance(AWS_KEY, AWS_SECRET_KEY, AWS_HOST, true,
                         SimpleDB::ERROR_HANDLING_THROW_EXCEPTION);
         try {
             $sdb->createDomain('xx');
             $this->fail('Domain name too short');
-        } catch (g_g\php_sdb2\SimpleDBException $e){}
+        } catch (g_g\php_sdb2\SimpleDBException $e) {
+            
+        }
         try {
             $sdb->createDomain(str_pad('aa', 257, 'a'));
             $this->fail('Domain name too long');
-        } catch (g_g\php_sdb2\SimpleDBException $e){}
+        } catch (g_g\php_sdb2\SimpleDBException $e) {
+            
+        }
         try {
             $sdb->createDomain('The domain');
             $this->fail('Domain name has invalid characters');
-        } catch (g_g\php_sdb2\SimpleDBException $e){}
+        } catch (g_g\php_sdb2\SimpleDBException $e) {
+            
+        }
     }
 
     public function testCreateDomain() {
@@ -326,14 +332,14 @@ class SimpleDBTest extends PHPUnit_Framework_TestCase {
      * @depends testSelect
      * @depends testBatchDeleteAttributes
      */
-    public function testQueueDelete() {
+    public function testQueueDeleteAttributes() {
         $sdb = SimpleDBTestClass::getInstance(AWS_KEY, AWS_SECRET_KEY, AWS_HOST, true,
                         SimpleDB::ERROR_HANDLING_THROW_EXCEPTION);
-        $this->assertTrue($sdb->queueDelete(DOMAIN2, 'Item20'));
+        $this->assertTrue($sdb->queueDeleteAttributes(DOMAIN2, 'Item20'));
         for ($i = 21; $i < 44; $i++) {
-            $sdb->queueDelete(DOMAIN2, 'Item' . $i);
+            $sdb->queueDeleteAttributes(DOMAIN2, 'Item' . $i);
         }
-        $this->assertTrue($this->runMock('queueDelete', array(DOMAIN2, 'Item44')));
+        $this->assertTrue($this->runMock('queueDeleteAttributes', array(DOMAIN2, 'Item44')));
         if (LIVE_TEST == 'yes') {
             $result = $sdb->select('select count(*) from ' . DOMAIN2, null, true);
             $this->assertEquals(2599, $result['Domain']['Count']);
@@ -341,9 +347,7 @@ class SimpleDBTest extends PHPUnit_Framework_TestCase {
     }
 
     /**
-     * @depends testSelect
-     * @depends testBatchDeleteAttributes
-     * @depends testQueueDelete
+     * @depends testQueueDeleteAttributes
      */
     public function testDeleteWhere() {
         $this->assertTrue($this->runMock('deleteWhere',
@@ -374,6 +378,22 @@ class SimpleDBTest extends PHPUnit_Framework_TestCase {
         }
     }
 
+    /**
+     * @depends testQueuePutAttributes
+     */
+    public function testFlushQueues() {
+        $sdb = SimpleDBTestClass::getInstance(AWS_KEY, AWS_SECRET_KEY, AWS_HOST, true,
+                        SimpleDB::ERROR_HANDLING_THROW_EXCEPTION);
+        $sdb->queueDeleteAttributes(DOMAIN2, 'Item277', array('a1' => null));
+        $sdb->queuePutAttributes(DOMAIN2, 'Item5101', array('a1' => 2, 'a2' => 3, 'a3' => 4));
+        $this->assertTrue($this->runMock('flushQueues'));
+        if (LIVE_TEST == 'yes') {
+            $this->assertEquals(array('a2' => 554, 'a3' => 831), $sdb->getAttributes(DOMAIN2, 'Item277'));
+            $result = $sdb->select('select count(*) from ' . DOMAIN2, null, true);
+            $this->assertEquals(2622, $result['Domain']['Count']);
+        }
+    }
+
     public function testErrorHandling() {
         $sdb = SimpleDBTestClass::getInstance(AWS_KEY, AWS_SECRET_KEY, AWS_HOST, true,
                         SimpleDB::ERROR_HANDLING_THROW_EXCEPTION);
@@ -400,6 +420,15 @@ class SimpleDBTest extends PHPUnit_Framework_TestCase {
             $this->assertNotContains(DOMAIN2, $list);
         }
     }
+    
+    public function testServiceUnavailableCallback() {
+        $sdb = SimpleDBTestClass::getInstance(AWS_KEY, AWS_SECRET_KEY, AWS_HOST, true,
+                        SimpleDB::ERROR_HANDLING_THROW_EXCEPTION);
+        $sdb->clearServiceUnavailableRetryDelayCallback();
+        $this->assertEquals(0, $sdb->executeServiceTemporarilyUnavailableRetryDelay(3));
+        $sdb->setServiceUnavailableRetryDelayCallback(array($sdb, 'serviceUnavailable4RetriesCallback'));
+        $this->assertEquals(1000, $sdb->executeServiceTemporarilyUnavailableRetryDelay(3));
+    }
 
     /**
      * @depends testCreateDomain
@@ -412,13 +441,16 @@ class SimpleDBTest extends PHPUnit_Framework_TestCase {
      * @depends testGetAttributes
      * @depends testPutAttributes
      * @depends testSelect
+     * @depends testFlushQueues
+     * @depends testQueuePutAttributes
+     * @depends testQueueDeleteAttributes
      * @depends testDeleteWhere
      */
     public function testGetTotalBoxUsage() {
         // this test shows changes in the AWS time calculation in live mode ;-)
         $sdb = SimpleDBTestClass::getInstance(AWS_KEY, AWS_SECRET_KEY, AWS_HOST, true,
                         SimpleDB::ERROR_HANDLING_THROW_EXCEPTION);
-        $this->assertEquals(LIVE_TEST == 'yes' ? '0.0703134738' : '0.0128864849', $sdb->getTotalBoxUsage());
+        $this->assertEquals(LIVE_TEST == 'yes' ? '0.0704101993' : '0.0129304719', $sdb->getTotalBoxUsage());
     }
 
     public static function tearDownAfterClass() {
@@ -439,7 +471,7 @@ class SimpleDBTest extends PHPUnit_Framework_TestCase {
         }
     }
 
-    protected function runMock($method, $args, $postfix = '') {
+    protected function runMock($method, $args = array(), $postfix = '') {
         $sdb = SimpleDBTestClass::getInstance(AWS_KEY, AWS_SECRET_KEY, AWS_HOST, true,
                         SimpleDB::ERROR_HANDLING_THROW_EXCEPTION);
         SimpleDBRequestMock::$nthResponse = 0;
@@ -1481,7 +1513,7 @@ AAAAAAAAAAAAAAB0ABNbMTMxODI0OTU0NTc0OSwxMDldcHB4</NextToken></SelectResult><Resp
                     ),
                 ),
             ),
-            'queueDelete' => array(
+            'queueDeleteAttributes' => array(
                 'params' => array(
                     'DomainName' => DOMAIN2,
                     'Action' => 'BatchDeleteAttributes',
@@ -1725,6 +1757,60 @@ AAAAAAAAAAAAAAB0ABNbMTMxODI0OTU0NTc0OSwxMDldcHB4</NextToken></SelectResult><Resp
                     'code' => 200,
                     'rawXML' => '<?xml version="1.0"?>
 <BatchPutAttributesResponse xmlns="http://sdb.amazonaws.com/doc/2009-04-15/"><ResponseMetadata><RequestId>83d153cd-7ed3-6f93-9c25-1125e7fd47fb</RequestId><BoxUsage>0.0003849317</BoxUsage></ResponseMetadata></BatchPutAttributesResponse>',
+            )),
+            'flushQueues' => array(
+                'params' => array(
+                    array(
+                        'DomainName' => DOMAIN2,
+                        'Action' => 'BatchPutAttributes',
+                        'Version' => '2009-04-15',
+                        'SignatureVersion' => '2',
+                        'SignatureMethod' => 'HmacSHA256',
+                        'AWSAccessKeyId' => AWS_KEY,
+                        'Item.0.ItemName' => 'Item5101',
+                        'Item.0.Attribute.0.Name' => 'a1',
+                        'Item.0.Attribute.0.Value' => 2,
+                        'Item.0.Attribute.1.Name' => 'a2',
+                        'Item.0.Attribute.1.Value' => 3,
+                        'Item.0.Attribute.2.Name' => 'a3',
+                        'Item.0.Attribute.2.Value' => 4,
+                    ),
+                    array(
+                        'DomainName' => DOMAIN2,
+                        'Action' => 'BatchDeleteAttributes',
+                        'Version' => '2009-04-15',
+                        'SignatureVersion' => '2',
+                        'SignatureMethod' => 'HmacSHA256',
+                        'AWSAccessKeyId' => AWS_KEY,
+                        'Item.0.ItemName' => 'Item277',
+                        'Item.0.Attribute.0.Name' => 'a1',
+                    ),
+                ),
+                'result' => array(
+                    (object) array(
+                        'error' => false,
+                        'body' => (object) array(
+                            'ResponseMetadata' => (object) array(
+                                'RequestId' => 'aafdedcc-0c40-2eef-a6f3-cc001c6e88a0',
+                                'BoxUsage' => '0.0000219961',
+                            ),
+                        ),
+                        'code' => 200,
+                        'rawXML' => '<?xml version="1.0"?>
+<BatchPutAttributesResponse xmlns="http://sdb.amazonaws.com/doc/2009-04-15/"><ResponseMetadata><RequestId>aafdedcc-0c40-2eef-a6f3-cc001c6e88a0</RequestId><BoxUsage>0.0000219961</BoxUsage></ResponseMetadata></BatchPutAttributesResponse>',
+                    ),
+                    (object) array(
+                        'error' => false,
+                        'body' => (object) array(
+                            'ResponseMetadata' => (object) array(
+                                'RequestId' => '31b741c8-9a50-77c8-4299-182a983284db',
+                                'BoxUsage' => '0.0000219909',
+                            ),
+                        ),
+                        'code' => 200,
+                        'rawXML' => '<?xml version="1.0"?>
+<BatchDeleteAttributesResponse xmlns="http://sdb.amazonaws.com/doc/2009-04-15/"><ResponseMetadata><RequestId>31b741c8-9a50-77c8-4299-182a983284db</RequestId><BoxUsage>0.0000219909</BoxUsage></ResponseMetadata></BatchDeleteAttributesResponse>',
+                    ),
             )),
         );
         if (!isset($testData[$key]) || !isset($testData[$key][$type])) {

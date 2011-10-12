@@ -629,13 +629,13 @@ class SimpleDB {
         $this->_checkDomainName($domain, 'deleteWhere');
         $result = $this->_doSelect('select itemName() from `' . $domain . '` where ' . $condition, null, $ConsistentRead, true,
                 array($this, '_queueItemsForDelete'));
-        return $result && $this->flushDeleteQueue($domain);
+        return $result && $this->flushDeleteAttributesQueue($domain);
     }
 
     protected function _queueItemsForDelete($items, $domain) {
         $result = true;
         foreach ($items as $itemName => $empty) {
-            $result = $result && $this->queueDelete($domain, $itemName);
+            $result = $result && $this->queueDeleteAttributes($domain, $itemName);
         }
         return $result;
     }
@@ -645,13 +645,14 @@ class SimpleDB {
      * 
      * @param string $domain
      * @param string $itemName
+     * @param array|null $attributes @see batchDeleteAttributes
      * @return boolean 
      */
-    public function queueDelete($domain, $itemName) {
-        $this->_checkDomainName($domain, 'queueDelete');
-        $this->_itemsToDelete[$domain][$itemName] = null;
+    public function queueDeleteAttributes($domain, $itemName, $attributes = null) {
+        $this->_checkDomainName($domain, 'queueDeleteAttributes');
+        $this->_itemsToDelete[$domain][$itemName] = $attributes;
         if (count($this->_itemsToDelete[$domain]) == self::MAX_ITEM_BATCH_SIZE) {
-            return $this->flushDeleteQueue($domain);
+            return $this->flushDeleteAttributesQueue($domain);
         }
         return true;
     }
@@ -662,8 +663,8 @@ class SimpleDB {
      * @param string $domain
      * @return boolean 
      */
-    public function flushDeleteQueue($domain) {
-        $this->_checkDomainName($domain, 'flushDeleteQueue');
+    public function flushDeleteAttributesQueue($domain) {
+        $this->_checkDomainName($domain, 'flushDeleteAttributesQueue');
         $result = true;
         if (isset($this->_itemsToDelete[$domain]) && count($this->_itemsToDelete[$domain])) {
             $result = $this->batchDeleteAttributes($domain, $this->_itemsToDelete[$domain]);
@@ -727,11 +728,11 @@ class SimpleDB {
      * @return boolean
      */
    
-    public function flushDeleteQueues() {
+    public function flushDeleteAttributesQueues() {
         $result = true;
         foreach ($this->_itemsToDelete as $domain => $items) {
             if (count($items)) {
-                $result &= $this->flushDeleteQueue($domain);
+                $result &= $this->flushDeleteAttributesQueue($domain);
             }
         }
         return $result;
@@ -745,7 +746,7 @@ class SimpleDB {
     public function flushQueues() {
         $result = true;
         $result = $result && $this->flushPutAttributesQueues();
-        $result = $result && $this->flushDeleteQueues();
+        $result = $result && $this->flushDeleteAttributesQueues();
         return $result;
     }
 

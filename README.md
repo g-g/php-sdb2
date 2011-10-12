@@ -109,6 +109,9 @@ You can find more examples in the [examples directory](https://github.com/g-g/ph
 There are some sample programs for the original library, which work also for this library, except the select and
 batchPutAttributes method. Check out the [Webmaster In Residence](http://webmasterinresidence.ca/webmasterinresidence/?p=464)
 
+You may also check the unit tests in SimpleDBTest. There you can find many examples how to use a method, and the 
+getResultData() method provides the parameters that are send to AWS SimpleDB and what it returns in each case.
+
 About
 =====
 
