@@ -1,7 +1,7 @@
 php-sdk2
 ========
 
-php-sdk2 is a single class PHP library that makes the Amazon AWS SimpleDB REST API available
+php-sdk2 is a PHP library that makes the Amazon AWS SimpleDB REST API available
 as PHP methods. All 
 [API operations](http://docs.amazonwebservices.com/AmazonSimpleDB/latest/DeveloperGuide/SDB_API_Operations.html)
 are available:
@@ -22,7 +22,8 @@ Some additional functionality is available:
 *    Default handler for service temporarily unavailable, which retries four times with different waiting intervals
      before giving up
 *    A total machine hours counter, that adds all box usage returns over the life time of the SimpleDB object
-*    A queue PutAttributes and a queue delete feature, because it is less expensive to send one batch request than many single 
+*    A queue PutAttributes and a queue deleteAttributes feature, because one batch request reduces round trips and 
+     latencies compared to many single requests. 
      requests. The methods take care themselves to send data when the maximum item number for a batch job is reached.
 *    The select method has an additional argument to return the whole result at once. No more NextTokens ;-) (if a large 
      result set is returned, this may need a lot of memory, be careful). 
