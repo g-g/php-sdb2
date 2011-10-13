@@ -71,18 +71,14 @@ class SimpleDBTest extends PHPUnit_Framework_TestCase {
         }
     }
 
-    public function testGetInstance() {
+    public function testGetInstanceReturnsSimpleDBObject() {
         $sdb = SimpleDBTestClass::getInstance(AWS_KEY, AWS_SECRET_KEY, AWS_HOST, true,
                         SimpleDB::ERROR_HANDLING_THROW_EXCEPTION);
-        $sdb2 = SimpleDBTestClass::getInstance('xxxx', 'secret', 'another.host', true,
-                        SimpleDB::ERROR_HANDLING_THROW_EXCEPTION);
-        $this->assertTrue($sdb2 instanceof SimpleDB);
-        $this->assertFalse($sdb == $sdb2);
+        $this->assertTrue($sdb instanceof SimpleDB);
     }
 
     public function testDomainNameSanity() {
-        $sdb = SimpleDBTestClass::getInstance(AWS_KEY, AWS_SECRET_KEY, AWS_HOST, true,
-                        SimpleDB::ERROR_HANDLING_THROW_EXCEPTION);
+        $sdb = SimpleDBTestClass::getInstance();
         try {
             $sdb->createDomain('xx');
             $this->fail('Domain name too short');
@@ -106,8 +102,7 @@ class SimpleDBTest extends PHPUnit_Framework_TestCase {
     public function testCreateDomain() {
         $this->assertTrue($this->runMock('createDomain', array(DOMAIN1)));
         if (LIVE_TEST == 'yes') {
-            $sdb = SimpleDBTestClass::getInstance(AWS_KEY, AWS_SECRET_KEY, AWS_HOST, true,
-                            SimpleDB::ERROR_HANDLING_THROW_EXCEPTION);
+            $sdb = SimpleDBTestClass::getInstance();
             $this->assertTrue($sdb->createDomain(DOMAIN2));
             $this->wait();
         }
@@ -132,8 +127,7 @@ class SimpleDBTest extends PHPUnit_Framework_TestCase {
     }
 
     public function testGetters() {
-        $sdb = SimpleDBTestClass::getInstance(AWS_KEY, AWS_SECRET_KEY, AWS_HOST, true,
-                        SimpleDB::ERROR_HANDLING_THROW_EXCEPTION);
+        $sdb = SimpleDBTestClass::getInstance();
         $this->assertEquals(AWS_HOST, $sdb->getHost());
         $this->assertEquals(AWS_KEY, $sdb->getAccessKey());
         $this->assertEquals(AWS_SECRET_KEY, $sdb->getSecretKey());
@@ -144,8 +138,7 @@ class SimpleDBTest extends PHPUnit_Framework_TestCase {
      * @depends testCreateDomain
      */
     public function testPutAttributes() {
-        $sdb = SimpleDBTestClass::getInstance(AWS_KEY, AWS_SECRET_KEY, AWS_HOST, true,
-                        SimpleDB::ERROR_HANDLING_THROW_EXCEPTION);
+        $sdb = SimpleDBTestClass::getInstance();
         $item = array('a1' => 1, 'a2' => 2, 'a3' => 3);
         $this->assertTrue($this->runMock('putAttributes', array(DOMAIN1, 'Item1', $item), '1'));
         if (LIVE_TEST == 'yes') {
@@ -199,8 +192,7 @@ class SimpleDBTest extends PHPUnit_Framework_TestCase {
      * @depends testPutAttributes
      */
     public function testDeleteAttributes() {
-        $sdb = SimpleDBTestClass::getInstance(AWS_KEY, AWS_SECRET_KEY, AWS_HOST, true,
-                        SimpleDB::ERROR_HANDLING_THROW_EXCEPTION);
+        $sdb = SimpleDBTestClass::getInstance();
         $this->assertTrue($this->runMock('deleteAttributes',
                         array(DOMAIN1, 'Item2', array('a1', 'a3'), array('a1' => 6)), '1'));
         if (LIVE_TEST == 'yes') {
@@ -243,8 +235,7 @@ class SimpleDBTest extends PHPUnit_Framework_TestCase {
      * @expectedExceptionMessage NumberSubmittedItemsExceeded
      */
     public function testBatchPutAttributesMaxItems() {
-        $sdb = SimpleDBTestClass::getInstance(AWS_KEY, AWS_SECRET_KEY, AWS_HOST, true,
-                        SimpleDB::ERROR_HANDLING_THROW_EXCEPTION);
+        $sdb = SimpleDBTestClass::getInstance();
         $sdb->batchPutAttributes(DOMAIN1, array_fill(0, 26, array('a1' => 1, 'a2' => 2, 'a3' => 3)));
     }
 
@@ -253,8 +244,7 @@ class SimpleDBTest extends PHPUnit_Framework_TestCase {
      * @depends testDomainMetadata
      */
     public function testBatchPutAttributes() {
-        $sdb = SimpleDBTestClass::getInstance(AWS_KEY, AWS_SECRET_KEY, AWS_HOST, true,
-                        SimpleDB::ERROR_HANDLING_THROW_EXCEPTION);
+        $sdb = SimpleDBTestClass::getInstance();
         $items = array();
         for ($i = 1; $i < 26; $i++) {
             $items['Item' . $i] = array('a1' => 1, 'a2' => 2, 'a3' => 3);
@@ -291,8 +281,7 @@ class SimpleDBTest extends PHPUnit_Framework_TestCase {
      * @depends testBatchPutAttributes
      */
     public function testSelect() {
-        $sdb = SimpleDBTestClass::getInstance(AWS_KEY, AWS_SECRET_KEY, AWS_HOST, true,
-                        SimpleDB::ERROR_HANDLING_THROW_EXCEPTION);
+        $sdb = SimpleDBTestClass::getInstance();
         if (LIVE_TEST == 'yes') {
             for ($i = 0; $i < 105; $i++) {  // add more then the max limit (2500)
                 $items = array();
@@ -321,8 +310,7 @@ class SimpleDBTest extends PHPUnit_Framework_TestCase {
         $this->assertTrue($this->runMock('batchDeleteAttributes',
                         array(DOMAIN2, array('Item12' => null, 'Item13' => array('a1' => 1), 'Item13' => array('a2' => array(7, 8))))));
         if (LIVE_TEST == 'yes') {
-            $sdb = SimpleDBTestClass::getInstance(AWS_KEY, AWS_SECRET_KEY, AWS_HOST, true,
-                            SimpleDB::ERROR_HANDLING_THROW_EXCEPTION);
+            $sdb = SimpleDBTestClass::getInstance();
             $result = $sdb->select('select count(*) from ' . DOMAIN2, null, true);
             $this->assertEquals(2624, $result['Domain']['Count']);
         }
@@ -333,8 +321,7 @@ class SimpleDBTest extends PHPUnit_Framework_TestCase {
      * @depends testBatchDeleteAttributes
      */
     public function testQueueDeleteAttributes() {
-        $sdb = SimpleDBTestClass::getInstance(AWS_KEY, AWS_SECRET_KEY, AWS_HOST, true,
-                        SimpleDB::ERROR_HANDLING_THROW_EXCEPTION);
+        $sdb = SimpleDBTestClass::getInstance();
         $this->assertTrue($sdb->queueDeleteAttributes(DOMAIN2, 'Item20'));
         for ($i = 21; $i < 44; $i++) {
             $sdb->queueDeleteAttributes(DOMAIN2, 'Item' . $i);
@@ -353,8 +340,7 @@ class SimpleDBTest extends PHPUnit_Framework_TestCase {
         $this->assertTrue($this->runMock('deleteWhere',
                         array(DOMAIN2, "itemName() in ('Item15', 'Item16', 'Item17')", true)));
         if (LIVE_TEST == 'yes') {
-            $sdb = SimpleDBTestClass::getInstance(AWS_KEY, AWS_SECRET_KEY, AWS_HOST, true,
-                            SimpleDB::ERROR_HANDLING_THROW_EXCEPTION);
+            $sdb = SimpleDBTestClass::getInstance();
             $result = $sdb->select('select count(*) from ' . DOMAIN2, null, true);
             $this->assertEquals(2596, $result['Domain']['Count']);
         }
@@ -364,8 +350,7 @@ class SimpleDBTest extends PHPUnit_Framework_TestCase {
      * @depends testDeleteWhere
      */
     public function testQueuePutAttributes() {
-        $sdb = SimpleDBTestClass::getInstance(AWS_KEY, AWS_SECRET_KEY, AWS_HOST, true,
-                        SimpleDB::ERROR_HANDLING_THROW_EXCEPTION);
+        $sdb = SimpleDBTestClass::getInstance();
         $this->assertTrue($sdb->queuePutAttributes(DOMAIN2, 'Item5000', array('a1' => 2, 'a2' => 3, 'a3' => 4), true));
         for ($i = 5001; $i < 5024; $i++) {
             $sdb->queuePutAttributes(DOMAIN2, 'Item' . $i, array('a1' => 2, 'a2' => 3, 'a3' => 4));
@@ -382,8 +367,7 @@ class SimpleDBTest extends PHPUnit_Framework_TestCase {
      * @depends testQueuePutAttributes
      */
     public function testFlushQueues() {
-        $sdb = SimpleDBTestClass::getInstance(AWS_KEY, AWS_SECRET_KEY, AWS_HOST, true,
-                        SimpleDB::ERROR_HANDLING_THROW_EXCEPTION);
+        $sdb = SimpleDBTestClass::getInstance();
         $sdb->queueDeleteAttributes(DOMAIN2, 'Item277', array('a1' => null));
         $sdb->queuePutAttributes(DOMAIN2, 'Item5101', array('a1' => 2, 'a2' => 3, 'a3' => 4));
         $this->assertTrue($this->runMock('flushQueues'));
@@ -394,14 +378,34 @@ class SimpleDBTest extends PHPUnit_Framework_TestCase {
         }
     }
 
-    public function testErrorHandling() {
-        $sdb = SimpleDBTestClass::getInstance(AWS_KEY, AWS_SECRET_KEY, AWS_HOST, true,
-                        SimpleDB::ERROR_HANDLING_THROW_EXCEPTION);
+    public function testErrorHandlingIgnore() {
+        $sdb = SimpleDBTestClass::getInstance();
         $sdb->setErrorHandling(SimpleDB::ERROR_HANDLING_IGNORE);
         $this->assertFalse($sdb->batchPutAttributes(DOMAIN1, array_fill(0, 26, array('a1' => 1, 'a2' => 2, 'a3' => 3))));
         $this->assertTrue($sdb->getLastError() instanceof SimpleDBError);
+    }
+    
+    /**
+     * @expectedException PHPUnit_Framework_Error
+     * @expectedExceptionMessage SimpleDB::batchPutAttributes(): NumberSubmittedItemsExceeded Too many items in a single call. Up to 25 items per call allowed.
+     */
+    public function testErrorHandlingError() {
+        $sdb = SimpleDBTestClass::getInstance();
+        $sdb->setErrorHandling(SimpleDB::ERROR_HANDLING_TRIGGER_ERROR);
+        $sdb->batchPutAttributes(DOMAIN1, array_fill(0, 26, array('a1' => 1, 'a2' => 2, 'a3' => 3)));
+    }
+    
+    /**
+     * @expectedException PHPUnit_Framework_Error_Warning
+     * @expectedExceptionMessage SimpleDB::batchPutAttributes(): NumberSubmittedItemsExceeded Too many items in a single call. Up to 25 items per call allowed.
+     */
+    public function testErrorHandlingWarning() {
+        $sdb = SimpleDBTestClass::getInstance();
+        $sdb->setErrorHandling(SimpleDB::ERROR_HANDLING_TRIGGER_WARNING);
+        $this->assertFalse($sdb->batchPutAttributes(DOMAIN1, array_fill(0, 26, array('a1' => 1, 'a2' => 2, 'a3' => 3))));
         $sdb->setErrorHandling(SimpleDB::ERROR_HANDLING_THROW_EXCEPTION);
     }
+    
 
     /**
      * @depends testCreateDomain
@@ -410,8 +414,7 @@ class SimpleDBTest extends PHPUnit_Framework_TestCase {
     public function testDeleteDomain() {
         $this->runMock('deleteDomain', array(DOMAIN1));
         if (LIVE_TEST == 'yes') {
-            $sdb = SimpleDBTestClass::getInstance(AWS_KEY, AWS_SECRET_KEY, AWS_HOST, true,
-                            SimpleDB::ERROR_HANDLING_THROW_EXCEPTION);
+            $sdb = SimpleDBTestClass::getInstance();
             $sdb->deleteDomain(DOMAIN1);
             $sdb->deleteDomain(DOMAIN2);
             $this->wait();
@@ -422,8 +425,7 @@ class SimpleDBTest extends PHPUnit_Framework_TestCase {
     }
     
     public function testServiceUnavailableCallback() {
-        $sdb = SimpleDBTestClass::getInstance(AWS_KEY, AWS_SECRET_KEY, AWS_HOST, true,
-                        SimpleDB::ERROR_HANDLING_THROW_EXCEPTION);
+        $sdb = SimpleDBTestClass::getInstance();
         $sdb->clearServiceUnavailableRetryDelayCallback();
         $this->assertEquals(0, $sdb->executeServiceTemporarilyUnavailableRetryDelay(3));
         $sdb->setServiceUnavailableRetryDelayCallback(array($sdb, 'serviceUnavailable4RetriesCallback'));
@@ -448,9 +450,24 @@ class SimpleDBTest extends PHPUnit_Framework_TestCase {
      */
     public function testGetTotalBoxUsage() {
         // this test shows changes in the AWS time calculation in live mode ;-)
+        $sdb = SimpleDBTestClass::getInstance();
+        $this->assertEquals(LIVE_TEST == 'yes' ? '0.0704101993' : '0.0129304719', $sdb->getTotalBoxUsage());
+    }
+
+    public function testGetInstanceDifferent() {
         $sdb = SimpleDBTestClass::getInstance(AWS_KEY, AWS_SECRET_KEY, AWS_HOST, true,
                         SimpleDB::ERROR_HANDLING_THROW_EXCEPTION);
-        $this->assertEquals(LIVE_TEST == 'yes' ? '0.0704101993' : '0.0129304719', $sdb->getTotalBoxUsage());
+        $sdb2 = SimpleDBTestClass::getInstance('xxxx', 'secret', 'another.host', true,
+                        SimpleDB::ERROR_HANDLING_THROW_EXCEPTION);
+        $this->assertNotEquals($sdb, $sdb2);
+    }
+    
+    /**
+     * @expectedException PHPUnit_Framework_Error_Warning
+     * @expectedExceptionMessage SimpleDB::getInstance() failed, because there are more than one connections.
+     */
+    public function testGetInstanceFail() {
+       $sdb = SimpleDBTestClass::getInstance(); 
     }
 
     public static function tearDownAfterClass() {

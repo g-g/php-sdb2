@@ -70,6 +70,14 @@ class SimpleDB {
      * @return g_g\php_sdb2\SimpleDB
      */
     public static function getInstance($accessKey = null, $secretKey = null, $host = 'sdb.amazonaws.com', $useSSL = true, $errorHandling = self::ERROR_HANDLING_TRIGGER_WARNING) {
+        if (!isset($accessKey)) {
+            if (count(self::$_connections) == 1) {
+                return reset(self::$_connections);
+            } else {
+                trigger_error('SimpleDB::getInstance() failed, because ' . (count(self::$_connections) ? 'there are more than one connections.' : ' there is no connection.'), E_USER_WARNING);
+                return false;
+            }
+        }
         if (!isset(self::$_connections[$accessKey . $host])) {
             self::$_connections[$accessKey . $host] = new static($accessKey, $secretKey, $host, $useSSL, $errorHandling);
         }
@@ -568,13 +576,11 @@ class SimpleDB {
         $this->lastError = $errors;
         $severity = E_USER_WARNING;
         switch ($this->_errorHandling) {
-            case self::ERROR_HANDLING_IGNORE:
-                return;
             case self::ERROR_HANDLING_THROW_EXCEPTION:
                 throw new SimpleDBException($errors);
-            case self::ERROR_HANDLING_TRIGGER_WARNING:
+            case self::ERROR_HANDLING_TRIGGER_ERROR:
                 $severity = E_USER_ERROR;
-            default:
+            case self::ERROR_HANDLING_TRIGGER_WARNING:
                 foreach ($errors as $error) {
                     $this->ErrorCode = $error['code'];
                     trigger_error(sprintf('SimpleDB::%s(): %s %s', $error['method'], $error['code'], $error['message']),
@@ -677,14 +683,14 @@ class SimpleDB {
      * Queue a putAttributes operation to minimize the number of connections to AWS SimpleDB
      *
      * @param string $domain
-     * @param string $name
+     * @param string $itemName
      * @param array $attributes
      * @param boolean $replace
      * @return boolean 
      */
-    public function queuePutAttributes($domain, $name, $attributes, $replace = false) {
+    public function queuePutAttributes($domain, $itemName, $attributes, $replace = false) {
         $this->_checkDomainName($domain, 'queuePutAttributes');
-        $this->_itemsToWrite[$domain][$name] = $replace ? $this->_addMissingReplaceFlags($attributes, true) : $attributes;
+        $this->_itemsToWrite[$domain][$itemName] = $replace ? $this->_addMissingReplaceFlags($attributes, true) : $attributes;
         if (count($this->_itemsToWrite[$domain]) == self::MAX_ITEM_BATCH_SIZE) {
             return $this->flushPutAttributesQueue($domain);
         }
