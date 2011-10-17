@@ -54,7 +54,15 @@ I forked it because it doesn't seem to be maintained anymore, and some functiona
 Install
 -------
 
-Just copy everything from the src directory to your project's directory.
+Get a copy. You have three choices:
+
+1. Click on the nice button where it says "ZIP" on [https://github.com/g-g/php-sdb2](https://github.com/g-g/php-sdb2).
+2. Use git to clone the repository.
+   `git clone https://github.com/g-g/php-sdb2 /your/directory/path`
+3. Check it out with subversion.
+   `svn checkout http://svn.github.com/g-g/php-sdb2.git`
+
+If you want to use the library in you own project, you will only need the files in the src directory.
 
 Usage
 -----

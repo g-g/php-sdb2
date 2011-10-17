@@ -49,6 +49,7 @@ class SimpleDBRequest {
         $this->sdb = $sdb;
         $this->response = new \STDClass;
         $this->response->error = false;
+        $this->response->action = $action;
     }
 
     /**

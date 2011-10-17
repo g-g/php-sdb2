@@ -34,6 +34,7 @@ require_once dirname(__FILE__) . '/SimpleDBException.php';
  */
 class SimpleDB {
     const MAX_ITEM_BATCH_SIZE = 25; // This is an AWS limit (http://docs.amazonwebservices.com/AmazonSimpleDB/latest/DeveloperGuide/SDB_API_BatchPutAttributes.html)
+    const MAX_SELECT_LIMIT = 2500; // AWS limit: Max number of items returned by a select query at once
     const ERROR_HANDLING_IGNORE = 0;
     const ERROR_HANDLING_TRIGGER_WARNING = 1;
     const ERROR_HANDLING_TRIGGER_ERROR = 2;
@@ -58,7 +59,6 @@ class SimpleDB {
     public $NextToken;
     public $ErrorCode;
 
-
     /**
      * Returns a single object for each aws key and host constructed with the parameters past for the first call to getInstance..
      *
@@ -67,19 +67,24 @@ class SimpleDB {
      * @param string $host the AWS region host
      * @param boolean $useSSL Enable SSL
      * @param int $errorHandling any of this class' error handling constants
+     * @param boolean $useBuildin503Handler use SimpleDBs own service unavailable handler serviceUnavailable4RetriesCallback()
      * @return g_g\php_sdb2\SimpleDB
      */
-    public static function getInstance($accessKey = null, $secretKey = null, $host = 'sdb.amazonaws.com', $useSSL = true, $errorHandling = self::ERROR_HANDLING_TRIGGER_WARNING) {
+    public static function getInstance($accessKey = null, $secretKey = null, $host = 'sdb.amazonaws.com', $useSSL = true, $errorHandling = self::ERROR_HANDLING_TRIGGER_WARNING, $useBuildin503Handler = false) {
         if (!isset($accessKey)) {
             if (count(self::$_connections) == 1) {
                 return reset(self::$_connections);
             } else {
-                trigger_error('SimpleDB::getInstance() failed, because ' . (count(self::$_connections) ? 'there are more than one connections.' : ' there is no connection.'), E_USER_WARNING);
+                trigger_error('SimpleDB::getInstance() failed, because ' . (count(self::$_connections) ? 'there are more than one connections.' : ' there is no connection.'),
+                        E_USER_WARNING);
                 return false;
             }
         }
         if (!isset(self::$_connections[$accessKey . $host])) {
             self::$_connections[$accessKey . $host] = new static($accessKey, $secretKey, $host, $useSSL, $errorHandling);
+            if ($useBuildin503Handler) {
+                self::$_connections[$accessKey . $host]->setServiceUnavailableRetryDelayCallback(array(self::$_connections[$accessKey . $host], 'serviceUnavailable4RetriesCallback'));
+            }
         }
         return self::$_connections[$accessKey . $host];
     }
@@ -319,50 +324,6 @@ class SimpleDB {
         return $this->_doSelect($select, $nexttoken, $ConsistentRead, $returnTotalResult, false);
     }
 
-    protected function _doSelect($select, $nexttoken, $ConsistentRead, $returnTotalResult, $processor) {
-        $this->_clearReturns();
-        if ($nexttoken !== null) {
-            $this->NextToken = $nexttoken;
-        }
-        $limit = false;
-        if (preg_match('/limit (\\d+)/i', $select, $matches) && $returnTotalResult) {
-            $limit = $matches[1];
-            $select = preg_replace('/ limit \\d+/i', '', $select);
-        }
-        if (is_callable($processor)) {
-            $result = true;
-        } else {
-            $result = array();
-        }
-        preg_match('/from `?(\\w+)`?/i', $select, $matches);
-        $domain = $matches[1];
-        do {
-            $limitQuery = '';
-            if ($limit) {
-                if ($limit > 2500 && $returnTotalResult) {
-                    $limitQuery = ' limit 2500'; // 2500 is the max allowed limit from AWS SimpleDB
-                } else {
-                    $limitQuery = ' limit ' . $limit;
-                }
-            } elseif ($returnTotalResult) {
-                $limitQuery = ' limit 2500'; // if we want the whole result set, it doesn't make sense to limit the result to the default 100 items. 2500 is max for limit.
-            }
-            $values = $this->_doOneSelect($select . $limitQuery, $this->NextToken, $ConsistentRead);
-            if ($values === false) {
-                return false;
-            }
-            if ($limit) {
-                $limit -= count($values);
-            }
-            if (is_callable($processor)) {
-                $result = $result && call_user_func($processor, $values, $domain);
-            } else {
-                $result = array_merge($result, $values);
-            }
-        } while ($this->NextToken !== null && $returnTotalResult && ($limit === false || $limit > 0));
-        return $result;
-    }
-
     /**
      * Get attributes associated with an item
      *
@@ -566,30 +527,6 @@ class SimpleDB {
     }
 
     /**
-     * Trigger an error message
-     *
-     * @internal Used by member functions to output errors
-     * @param SimpleDBError $error containing error information
-     * @return string
-     */
-    protected function _triggerError(SimpleDBError $errors) {
-        $this->lastError = $errors;
-        $severity = E_USER_WARNING;
-        switch ($this->_errorHandling) {
-            case self::ERROR_HANDLING_THROW_EXCEPTION:
-                throw new SimpleDBException($errors);
-            case self::ERROR_HANDLING_TRIGGER_ERROR:
-                $severity = E_USER_ERROR;
-            case self::ERROR_HANDLING_TRIGGER_WARNING:
-                foreach ($errors as $error) {
-                    $this->ErrorCode = $error['code'];
-                    trigger_error(sprintf('SimpleDB::%s(): %s %s', $error['method'], $error['code'], $error['message']),
-                            $severity);
-                }
-        }
-    }
-
-    /**
      * Callback handler for 503 retries.
      *
      * @internal Used by SimpleDBRequest to call the user-specified callback, if set
@@ -633,17 +570,9 @@ class SimpleDB {
      */
     public function deleteWhere($domain, $condition, $ConsistentRead = false) {
         $this->_checkDomainName($domain, 'deleteWhere');
-        $result = $this->_doSelect('select itemName() from `' . $domain . '` where ' . $condition, null, $ConsistentRead, true,
-                array($this, '_queueItemsForDelete'));
+        $result = $this->_doSelect('select itemName() from `' . $domain . '` where ' . $condition, null,
+                $ConsistentRead, true, array($this, '_queueItemsForDelete'));
         return $result && $this->flushDeleteAttributesQueue($domain);
-    }
-
-    protected function _queueItemsForDelete($items, $domain) {
-        $result = true;
-        foreach ($items as $itemName => $empty) {
-            $result = $result && $this->queueDeleteAttributes($domain, $itemName);
-        }
-        return $result;
     }
 
     /**
@@ -733,7 +662,6 @@ class SimpleDB {
      *
      * @return boolean
      */
-   
     public function flushDeleteAttributesQueues() {
         $result = true;
         foreach ($this->_itemsToDelete as $domain => $items) {
@@ -762,10 +690,95 @@ class SimpleDB {
      * @param type $domain
      * @return type 
      */
-    public function validDomainName($domain){
+    public function validDomainName($domain) {
         return preg_match('/^[-a-zA-Z0-9_.]{3,255}$/', $domain);
     }
-    
+
+    /**
+     * gets the status of the last operation
+     * 
+     * @return false|SimpleDBError
+     */
+    public function getLastError() {
+        return $this->lastError;
+    }
+
+    protected function _queueItemsForDelete($items, $domain) {
+        $result = true;
+        foreach ($items as $itemName => $empty) {
+            $result = $result && $this->queueDeleteAttributes($domain, $itemName);
+        }
+        return $result;
+    }
+
+    /**
+     * Trigger an error message
+     *
+     * @internal Used by member functions to output errors
+     * @param SimpleDBError $error containing error information
+     * @return string
+     */
+    protected function _triggerError(SimpleDBError $errors) {
+        $this->lastError = $errors;
+        $severity = E_USER_WARNING;
+        switch ($this->_errorHandling) {
+            case self::ERROR_HANDLING_THROW_EXCEPTION:
+                throw new SimpleDBException($errors);
+            case self::ERROR_HANDLING_TRIGGER_ERROR:
+                $severity = E_USER_ERROR;
+            case self::ERROR_HANDLING_TRIGGER_WARNING:
+                foreach ($errors as $error) {
+                    $this->ErrorCode = $error['code'];
+                    trigger_error(sprintf('SimpleDB::%s(): %s %s', $error['method'], $error['code'], $error['message']),
+                            $severity);
+                }
+        }
+    }
+
+    protected function _doSelect($select, $nexttoken, $ConsistentRead, $returnTotalResult, $processor) {
+        $this->_clearReturns();
+        if ($nexttoken !== null) {
+            $this->NextToken = $nexttoken;
+        }
+        $limit = false;
+        if (preg_match('/limit (\\d+)/i', $select, $matches) && $returnTotalResult) {
+            $limit = $matches[1];
+            $select = preg_replace('/ limit \\d+/i', '', $select);
+        }
+        if (is_callable($processor)) {
+            $result = true;
+        } else {
+            $result = array();
+        }
+        preg_match('/from `?(\\w+)`?/i', $select, $matches);
+        $domain = $matches[1];
+        do {
+            $limitQuery = '';
+            if ($limit) {
+                if ($limit > self::MAX_SELECT_LIMIT && $returnTotalResult) {
+                    $limitQuery = ' limit ' . self::MAX_SELECT_LIMIT ;
+                } else {
+                    $limitQuery = ' limit ' . $limit;
+                }
+            } elseif ($returnTotalResult) {
+                $limitQuery = ' limit ' . self::MAX_SELECT_LIMIT; // if we want the whole result set, it doesn't make sense to limit the result to the default 100 items. MAX_SELECT_LIMIT is max for limit.
+            }
+            $values = $this->_doOneSelect($select . $limitQuery, $this->NextToken, $ConsistentRead);
+            if ($values === false) {
+                return false;
+            }
+            if ($limit) {
+                $limit -= count($values);
+            }
+            if (is_callable($processor)) {
+                $result = $result && call_user_func($processor, $values, $domain);
+            } else {
+                $result = array_merge($result, $values);
+            }
+        } while ($this->NextToken !== null && $returnTotalResult && ($limit === false || $limit > 0));
+        return $result;
+    }
+
     /**
      * Checks the response for errors and sets RequestId and BoxUsage
      * 
@@ -800,15 +813,6 @@ class SimpleDB {
             }
         }
         return true;
-    }
-
-    /**
-     * gets the status of the last operation
-     * 
-     * @return false|SimpleDBError
-     */
-    public function getLastError() {
-        return $this->lastError;
     }
 
     private function _setParameterForAttributes(SimpleDBRequest $rest, $attributes, $prefix = '') {
@@ -962,14 +966,12 @@ class SimpleDB {
     protected function _getSimpleDBRequest($domain, $action, $verb) {
         return new SimpleDBRequest($domain, $action, $verb, $this);
     }
-    
+
     protected function _checkDomainName($domain, $caller) {
         if (!$this->validDomainName($domain)) {
             $this->_triggerError(new SimpleDBError(array(array('method' => $caller, 'code' => 'InvalidDomainName', 'message' => 'The domain name "' . $domain . '" is invalid.'))));
         }
     }
-    
-    
 
 }
 
