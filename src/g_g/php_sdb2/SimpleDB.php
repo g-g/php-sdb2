@@ -52,6 +52,8 @@ class SimpleDB {
     protected $_itemsToDelete = array();
     protected $_errorHandling;
     protected static $_connections = array();
+    protected $_actionName = '';
+    
     public $lastError = false;
     // information related to last request
     public $BoxUsage;
@@ -964,6 +966,7 @@ class SimpleDB {
      * @return SimpleDBRequest 
      */
     protected function _getSimpleDBRequest($domain, $action, $verb) {
+        $this->_actionName = $action;
         return new SimpleDBRequest($domain, $action, $verb, $this);
     }
 
