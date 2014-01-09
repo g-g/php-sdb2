@@ -76,3 +76,6 @@
 - The code is now name spaced g_g/php_sdb2
 - The error handling has changed. You can choose between exception, user warning, user error or just ignore
 - Many others
+
+1.0.rc1
+- fixed PHP notice: Undefined property: stdClass::$body
