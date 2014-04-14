@@ -249,6 +249,11 @@ class SimpleDB {
             return $results;
         }
 
+        if (isset($rest->body->ListDomainsResult->NextToken))
+        {
+            $this->NextToken = (string) $rest->body->ListDomainsResult->NextToken;
+        }
+
         foreach ($rest->body->ListDomainsResult->DomainName as $d) {
             $results[] = (string) $d;
         }
