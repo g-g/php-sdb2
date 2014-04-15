@@ -249,8 +249,7 @@ class SimpleDB {
             return $results;
         }
 
-        if (isset($rest->body->ListDomainsResult->NextToken))
-        {
+        if (isset($rest->body->ListDomainsResult->NextToken)) {
             $this->NextToken = (string) $rest->body->ListDomainsResult->NextToken;
         }
 
